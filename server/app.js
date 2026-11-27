@@ -21,7 +21,9 @@ function createApp(options = {}) {
   if (!publisher) {
     const {LocalPublisher} = require("./publisher/local");
     const {GithubPublisher} = require("./publisher/github");
-    publisher = config.publisher === "github" ? new GithubPublisher(config) : new LocalPublisher(config);
+    const {FtpPublisher} = require("./publisher/ftp");
+    publisher = config.publisher === "github" ? new GithubPublisher(config)
+      : config.publisher === "ftp" ? new FtpPublisher(config) : new LocalPublisher(config);
   }
   const service = new Service({config, store, publisher, pdf, fetchImpl: options.fetchImpl});
 

@@ -7,7 +7,15 @@ function browser() {
     const {chromium} = require("playwright");
     const options = {args: ["--no-sandbox", "--font-render-hinting=none"]};
     if (process.env.CHROMIUM_PATH) options.executablePath = process.env.CHROMIUM_PATH;
-    browserPromise = chromium.launch(options).catch(error => { browserPromise = null; throw error; });
+    // Bundled Chromium if present, otherwise the Chrome or Edge already installed on the computer.
+    const attempt = async () => {
+      let last;
+      for (const extra of [{}, {channel: "chrome"}, {channel: "msedge"}]) {
+        try { return await chromium.launch({...options, ...extra}); } catch (error) { last = error; }
+      }
+      throw new Error("Aucun navigateur trouvé pour générer le PDF (installez Google Chrome ou Microsoft Edge). " + last.message.split("\n")[0]);
+    };
+    browserPromise = attempt().catch(error => { browserPromise = null; throw error; });
   }
   return browserPromise;
 }

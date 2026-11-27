@@ -9,13 +9,17 @@
   "scripts": {
     "start": "node server/index.js",
     "test": "node --test --test-timeout=120000 test/*.test.js",
-    "admin:add": "node server/cli.js add-admin"
+    "admin:add": "node server/cli.js add-admin",
+    "build:site": "node scripts/build-site.js",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
+    "basic-ftp": "^5.3.1",
     "pdf-lib": "^1.17.1",
     "sharp": "^0.33.5"
   },
   "devDependencies": {
+    "ftp-srv": "^4.6.3",
     "jsqr": "^1.4.0",
     "pngjs": "^7.0.0"
   }

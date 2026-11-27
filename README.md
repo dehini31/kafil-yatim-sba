@@ -58,6 +58,51 @@ Mise à jour : `git pull && docker compose up -d --build` (les pages statiques e
 
 Développement local : `npm install`, `npm run admin:add -- --email vous@exemple.org`, `npm start` puis <http://127.0.0.1:8787/admin/> (sans `BASE_PATH`).
 
+## Démarrage rapide (ordinateur du bureau, Windows / Mac / Linux)
+
+1. Installer **Node.js 22 (LTS)** depuis <https://nodejs.org> et avoir **Google Chrome ou Microsoft Edge** (utilisé pour fabriquer les PDF).
+2. Extraire `kafil-admin.zip`, puis **double-cliquer sur `start-admin.bat`** (Mac/Linux : `./start-admin.sh`).
+3. Au premier lancement, l'assistant demande le compte FTP de dehini.com (voir plus bas) puis crée votre compte administrateur. Il teste la connexion FTP.
+4. Le navigateur s'ouvre sur <http://127.0.0.1:8787/admin/> : se connecter, **Réglages** (contacts du bureau), puis **+ Nouvel adhérent → Créer et publier**. La fenêtre noire doit rester ouverte pendant l'utilisation.
+5. Dans la fiche : **Télécharger le PDF** (impression), **Télécharger le QR**, **Voir la carte**, **Copier le lien**. Dimensions et champs d'impression se règlent dans la fiche (par carte) ou dans Réglages (par défaut).
+
+Pour changer la configuration plus tard : supprimer le fichier `.env` et relancer, ou `npm run setup`.
+
+## Déploiement par Git sur l'hébergeur (sans envoi manuel)
+
+L'admin (sur l'ordinateur du bureau) publie chaque carte par un commit sur GitHub (`PUBLISHER=github`, `GITHUB_TOKEN` dans `.env`) ; l'hébergeur récupère le dépôt avec `git pull`. Le fichier `.htaccess` masque le code de l'application, les tests et les secrets.
+
+Une seule fois, dans le terminal de l'hébergeur :
+
+```bash
+cd ~/public_html
+git clone https://github.com/dehini31/kafil-yatim-sba.git kafil
+cd kafil && chmod +x deploy-host.sh
+```
+
+Mise à jour automatique : ajouter dans **cPanel → Tâches Cron** (chaque minute) `cd ~/public_html/kafil && ./deploy-host.sh >> ~/kafil-deploy.log 2>&1`. Sinon, lancer `./deploy-host.sh` à la main après chaque publication. Le dépôt doit être public ou l'hébergeur doit avoir une clé de déploiement en lecture seule.
+
+## Sans VPS : admin sur votre ordinateur, site sur dehini.com/kafil (FTP)
+
+Le site public (cartes, QR, pages) est statique : il n'a besoin que de l'hébergement actuel de dehini.com. Seule l'administration (connexion, PDF) demande Node et Chromium ; elle tourne sur un ordinateur du bureau et **envoie automatiquement chaque carte publiée par FTP** vers `dehini.com/kafil`.
+
+1. Dans le panneau de l'hébergeur (cPanel → *Comptes FTP*), créer un compte FTP limité au dossier `kafil` du site (ou noter l'hôte, l'identifiant et le mot de passe).
+2. Sur l'ordinateur : installer Docker Desktop (ou Node ≥ 22), cloner ce dépôt, copier `.env.example` en `.env` et régler :
+
+```
+PUBLISHER=ftp
+PUBLIC_BASE_URL=https://dehini.com/kafil/
+FTP_HOST=ftp.dehini.com
+FTP_USER=...            FTP_PASSWORD=...
+FTP_REMOTE_DIR=/public_html/kafil     # dossier du site sur l'hébergement
+# FTP_SECURE=false      # seulement si l'hébergeur ne gère pas FTPS
+```
+
+3. `npm install`, puis `npm run admin:add -- --email vous@exemple.org --name "Nom"`, puis `npm start` et ouvrir <http://127.0.0.1:8787/admin/>.
+4. `node server/cli.js ftp-sync` envoie une première fois le site complet ; ensuite chaque publication envoie seulement ce qui a changé. Un échec FTP apparaît comme « Échec » dans l'admin et « Relancer la publication » reprend sans doublon.
+
+L'ordinateur doit être allumé et la base `.data/` sauvegardée pour ajouter ou modifier des adhérents ; les cartes déjà publiées restent en ligne sans lui.
+
 ## Ajouter ou retirer un administrateur
 
 Pas d'inscription publique : les comptes se créent en ligne de commande sur le serveur (dans le conteneur : `docker compose exec kafil node server/cli.js …`).
@@ -77,7 +122,7 @@ Mots de passe hachés (scrypt), cookie de session `HttpOnly` + `SameSite=Strict`
 npm test
 ```
 
-18 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
+19 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
 
 ## Fichiers
 

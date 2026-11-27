@@ -23,6 +23,10 @@ function ask(question) {
     const password = process.env.ADMIN_PASSWORD || await ask("Mot de passe (12 caractères min.) : ");
     const created = await auth.addAdmin(store, {email, name: arg("name"), password});
     console.log(created ? "Administrateur créé." : "Mot de passe mis à jour (sessions révoquées).");
+  } else if (command === "ftp-sync") {
+    const config = load();
+    const {FtpPublisher} = require("./publisher/ftp");
+    console.log(await new FtpPublisher(config).sync());
   } else if (command === "list-admins") {
     for (const a of store.db.admins) console.log(a.email, a.disabled ? "(désactivé)" : "");
   } else if (command === "disable-admin") {
@@ -33,6 +37,6 @@ function ask(question) {
     store.save();
     console.log("Administrateur désactivé.");
   } else {
-    console.log("Commandes : add-admin --email X [--name Y] | list-admins | disable-admin --email X");
+    console.log("Commandes : add-admin --email X [--name Y] | ftp-sync | list-admins | disable-admin --email X");
   }
 })().catch(error => { console.error(error.message); process.exit(1); });
