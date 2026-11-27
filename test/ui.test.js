@@ -46,8 +46,9 @@ for (const [label, viewport] of [["mobile", {width: 360, height: 740}], ["deskto
     await dialog.getByText("PDF جاهز").waitFor({timeout: 20000});
     // preview iframe is the same document as the PDF
     const frame = dialog.frameLocator("iframe");
-    await frame.locator("#name").waitFor();
-    assert.equal(await frame.locator("#name").innerText(), name);
+    await frame.locator("#role").waitFor();
+    assert.equal(await frame.locator("#role").innerText(), "مسؤول الإعلام");
+    assert.equal(await frame.locator("#name").count(), 0, "recto prints role, not the member name, by default");
     const link = dialog.locator(".link");
     const url = await link.innerText();
     assert.match(url, /\/members\/[a-z0-9]{8}\/$/);

@@ -338,3 +338,20 @@ test("older databases get the new default contacts once, then keep admin edits",
   assert.equal(store.migrated, false);
   assert.equal(store.db.settings.contacts.address, "", "not refilled after the migration");
 });
+
+
+test("recto layout: default prints role/expiry/QR only; name and photo are optional extras that still fit", async () => {
+  const settings = (await api.call("GET", "/api/settings")).json.settings;
+  assert.equal(settings.printDefaults.fields.photo, false);
+  assert.equal(settings.printDefaults.fields.name, false);
+  const pv = await api.call("POST", "/api/print-preview", {memberId: created.id});
+  let html = (await api.call("GET", "/api/print-preview/" + pv.json.token)).text;
+  assert.ok(html.includes('id="role"') && html.includes("صالحة إلى") && html.includes('id="qr"'));
+  assert.ok(!html.includes('id="name"') && !html.includes('class="photo"'));
+  // everything on, long name and long role, still fits at 100 x 135
+  const draft = {fullName: "عبد الرحمن محمد الأمين بن عبد القادر بوزيان الحسني التلمساني الوهراني", role: "أمين المال المكلف بالشؤون الاجتماعية والتنسيق مع المكاتب البلدية"};
+  const full = await api.call("POST", "/api/print-preview", {memberId: created.id, draft, config: {fields: {photo: true, name: true, number: true}}});
+  assert.equal(full.json.layout.fits, true, JSON.stringify(full.json.layout));
+  html = (await api.call("GET", "/api/print-preview/" + full.json.token)).text;
+  assert.ok(html.includes('id="name"') && html.includes('class="photo"'));
+});

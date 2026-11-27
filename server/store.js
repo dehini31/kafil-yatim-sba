@@ -7,11 +7,12 @@ const defaults = () => ({
   admins: [], sessions: [], members: [], audit: [],
   settings: {
     contactsVersion: 2,
+    printVersion: 2,
     contacts: {"phone": "", "whatsapp": "", "facebook": "", "facebookName": "جمعية كافل اليتيم سيدي بلعباس الولائية", "instagram": "", "email": "", "maps": "", "address": "شارع ناصري عبد القادر، رقم 40، سيدي ياسين", "hours": "", "nationalWebsite": "https://kafilyatim.dz/", "nationalPhones": "0780 80 37 37\n0556 99 80 23\n0669 96 84 93", "nationalEmail": "contact@kafilyatim.dz"},
     publicFields: {photo: true, role: true, expiry: true, memberNumber: false},
     printDefaults: {
       widthMm: 100, heightMm: 135, orientation: "portrait",
-      fields: {logo: true, association: true, office: true, photo: true, name: true, role: true, expiry: true, number: false, qr: true}
+      fields: {logo: true, association: true, office: true, photo: false, name: false, role: true, expiry: true, number: false, qr: true}
     }
   }
 });
@@ -35,6 +36,12 @@ class Store {
     if (s.contactsVersion !== d.contactsVersion) {
       for (const key of Object.keys(d.contacts)) if (s.contacts[key] === "" && d.contacts[key]) s.contacts[key] = d.contacts[key];
       s.contactsVersion = d.contactsVersion;
+      changed = true;
+    }
+    // Print recto v2 (logo, association, office, QR, role, expiry — no photo/name): applied once to existing databases.
+    if (s.printVersion !== d.printVersion) {
+      s.printDefaults = {...(s.printDefaults || d.printDefaults), fields: {...d.printDefaults.fields}};
+      s.printVersion = d.printVersion;
       changed = true;
     }
     return changed;
