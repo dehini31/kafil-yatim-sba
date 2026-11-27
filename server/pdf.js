@@ -13,7 +13,12 @@ function browser() {
       for (const extra of [{}, {channel: "chrome"}, {channel: "msedge"}]) {
         try { return await chromium.launch({...options, ...extra}); } catch (error) { last = error; }
       }
-      throw new Error("Aucun navigateur trouvé pour générer le PDF (installez Google Chrome ou Microsoft Edge). " + last.message.split("\n")[0]);
+      // Hosting without a browser: optional @sparticuz/chromium (npm i @sparticuz/chromium) ships a compact Chromium.
+      try {
+        const sparticuz = require("@sparticuz/chromium");
+        return await chromium.launch({...options, executablePath: await sparticuz.executablePath(), args: [...sparticuz.args, "--no-sandbox"]});
+      } catch (error) { last = last || error; }
+      throw Object.assign(new Error("Aucun navigateur disponible sur ce serveur pour générer le PDF. " + String(last && last.message).split("\n")[0]), {code: "NO_BROWSER"});
     };
     browserPromise = attempt().catch(error => { browserPromise = null; throw error; });
   }

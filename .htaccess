@@ -3,6 +3,6 @@ Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule (^|/)\.(?!well-known) - [R=404,L]
-RewriteRule ^(server|admin|test|scripts|node_modules|dist|templates)(/|$) - [R=404,L]
+RewriteRule ^(server|test|scripts|node_modules|dist|templates)(/|$) - [R=404,L]
 RewriteRule ^(package(-lock)?\.json|Dockerfile|docker-compose\.yml|deploy-nginx\.conf|deploy-host\.sh|README\.md|start-admin\.(bat|sh)|\.env.*)$ - [R=404,L]
 </IfModule>
