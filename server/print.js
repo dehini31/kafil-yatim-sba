@@ -3,12 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {root} = require("./config");
 const qr = require("./qr");
+const {layoutCard, MIN_MODULE_MM, GOLD} = require("./card");
 
 const FIELD_KEYS = ["logo", "association", "office", "photo", "name", "role", "expiry", "number", "qr"];
 const MIN_MM = 40, MAX_MM = 300;
-const MIN_MODULE_MM = 0.33; // below this a phone camera struggles to resolve the QR on paper
-const ASSOCIATION = "الجمعية الخيرية كافل اليتيم الوطنية";
-const OFFICE = "المكتب الولائي سيدي بلعباس";
 
 function normalizeConfig(input, defaults) {
   const base = defaults || {widthMm: 100, heightMm: 135, orientation: "portrait", fields: {}};
@@ -46,101 +44,48 @@ function logo() {
   return logoUri ||= "data:image/jpeg;base64," + fs.readFileSync(path.join(root, "assets/logo.jpg")).toString("base64");
 }
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
-const dmy = d => d.split("-").reverse().join("/");
+const n = v => Math.round(v * 1000) / 1000;
 
-// Self-contained HTML (fonts, images, QR inlined). The admin preview and the PDF use this exact document.
-// Layout follows the association's recto: logo, association, office, QR, role, divider, "valid until" + date.
-// Name and photo are optional extras (off by default: the card is verified through the QR).
-function buildHtml({member, config, publicUrl, photoBuffer}) {
-  const {w, h} = pageSize(config);
-  const landscape = w > h;
-  const short = Math.min(w, h), long = Math.max(w, h);
-  const u = Math.min(short / 100, long / 135);
-  const f = config.fields;
-  const qrMm = Math.round(36 * u * 10) / 10;
-  const modules = qr.modules(publicUrl) + 8;
-  const head = [], identity = [], tail = [];
-  if (f.logo) head.push(`<img class="logo" src="${logo()}" alt="">`);
-  if (f.association) head.push(`<p class="assoc">${ASSOCIATION}</p>`);
-  if (f.office) head.push(`<p class="office">${OFFICE}</p>`);
-  if (f.photo) {
-    const src = photoBuffer ? "data:image/jpeg;base64," + photoBuffer.toString("base64") : logo();
-    identity.push(`<img class="photo" src="${src}" alt="">`);
-  }
-  if (f.name) identity.push(`<h1 id="name" dir="auto">${esc(member.fullName)}</h1>`);
-  const showRole = f.role && member.role;
-  if (showRole) tail.push(`<p class="role${f.name ? " sub" : ""}" dir="auto" id="role">${esc(member.role)}</p>`);
-  if ((showRole || f.expiry) && (f.expiry || f.number)) tail.push(`<span class="rule"></span>`);
-  if (f.expiry) tail.push(`<div class="valid"><p class="label">صالحة إلى</p><p class="date"><bdi dir="ltr">${dmy(member.expiresAt)}</bdi></p></div>`);
-  if (f.number && member.memberNumber) tail.push(`<p class="meta">رقم العضوية : <bdi dir="ltr">${esc(member.memberNumber)}</bdi></p>`);
-  const group = (cls, items) => items.length ? `<div class="${cls}">${items.join("")}</div>` : "";
-  const qrHtml = f.qr ? `<div class="qr"><div class="qrbox" id="qr">${qr.svg(publicUrl)}</div></div>` : "";
-  const body = landscape
-    ? `${qrHtml}<div class="main" id="main">${group("head", head)}${group("who", identity)}${group("tail", tail)}</div>`
-    : `<div class="main" id="main">${group("head", head)}${group("who", identity)}${qrHtml}${group("tail", tail)}</div>`;
-
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
-<style>${fonts()}
-@page{size:${w}mm ${h}mm;margin:0}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{width:${w}mm;height:${h}mm;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:Tajawal,Arial,sans-serif;overflow:hidden}
-.card{--u:${u}mm;--k:1;position:relative;width:${w}mm;height:${h}mm;overflow:hidden;color:#fffefa;
- background:radial-gradient(ellipse at 50% 30%,#1c4a42,#163f38 75%)}
-.frame{position:absolute;inset:calc(var(--u)*3.2);border:calc(var(--u)*.4) solid #e9bd76;border-radius:calc(var(--u)*5);
- padding:calc(var(--u)*3.5) calc(var(--u)*2.4);display:flex;flex-direction:${landscape ? "row" : "column"};align-items:stretch;gap:calc(var(--u)*2)}
-.main{flex:1 1 auto;min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;gap:calc(var(--u)*1.6*var(--k));text-align:center}
-.head,.who,.tail{display:flex;flex-direction:column;align-items:center;width:100%;gap:calc(var(--u)*1.2*var(--k))}
-.logo{flex:none;width:calc(var(--u)*19*var(--k));height:calc(var(--u)*19*var(--k));object-fit:contain;background:#fff;border-radius:50%;padding:calc(var(--u)*.6)}
-.assoc{font-size:calc(var(--u)*4.9*var(--k));font-weight:800;line-height:1.3;color:#fffefa}
-.office{font-size:calc(var(--u)*4*var(--k));line-height:1.3;color:#e9bd76}
-.photo{flex:none;width:calc(var(--u)*24*var(--k));height:calc(var(--u)*24*var(--k));border-radius:50%;object-fit:cover;object-position:50% 25%;
- border:calc(var(--u)*.7) solid #e9bd76;padding:calc(var(--u)*.6);background:#21483f}
-h1{font-size:calc(var(--u)*6.4*var(--k));line-height:1.25;font-weight:800;max-width:100%;overflow-wrap:anywhere}
-.role{font-size:calc(var(--u)*7.4*var(--k));font-weight:800;line-height:1.3;max-width:100%;overflow-wrap:anywhere}
-.role.sub{font-size:calc(var(--u)*4.6*var(--k));color:#f5d299;font-weight:700}
-.rule{display:block;width:calc(var(--u)*14);height:calc(var(--u)*.35);background:#e9bd76;flex:none}
-.valid{display:flex;flex-direction:column;align-items:center}
-.label{font-size:calc(var(--u)*3.4*var(--k));color:#e3eee8;line-height:1.5}
-.date{font-size:calc(var(--u)*6.2*var(--k));font-weight:700;line-height:1.3}
-.meta{font-size:calc(var(--u)*3.3*var(--k));color:#e3eee8;line-height:1.5}
-.qr{flex:none;display:flex;align-items:center;justify-content:center}
-.qrbox{width:${qrMm}mm;height:${qrMm}mm;background:#fff}
-.qrbox svg{display:block;width:100%;height:100%}
-</style></head><body><div class="card" id="card"><div class="frame" id="frame">${body}</div></div>
-<script>
-window.__layout={ready:false};
-(async function(){
- try{await document.fonts.ready;}catch(e){}
- var mm=function(v){return v/(96/25.4)};
- var card=document.getElementById("card"),frame=document.getElementById("frame"),main=document.getElementById("main");
- var name=document.getElementById("name"),issues=[];
- function lines(el){return Math.round(el.getBoundingClientRect().height/parseFloat(getComputedStyle(el).lineHeight))}
- function overflows(){
-  var fr=frame.getBoundingClientRect(),bad=false;
-  [].forEach.call(frame.querySelectorAll(".head,.who,.tail,.qr,.photo,.logo,.assoc,.office,#name,.role,.valid,.meta"),function(el){
-   var r=el.getBoundingClientRect();
-   if(r.bottom>fr.bottom+0.5||r.right>fr.right+0.5||r.left<fr.left-0.5||r.top<fr.top-0.5)bad=true;
-  });
-  return bad||main.scrollHeight>main.clientHeight+1||main.scrollWidth>main.clientWidth+1;
- }
- if(name){
-  var size=parseFloat(getComputedStyle(name).fontSize),min=size*0.55;
-  while((lines(name)>2||name.scrollWidth>name.clientWidth+1)&&size>min){size-=size*0.04;name.style.fontSize=size+"px";}
-  if(lines(name)>3)issues.push({code:"name-wrap",blocking:false,message:"الاسم طويل جداً : يشغل أكثر من 3 أسطر."});
- }
- // Shrink everything but the QR a little at a time until the content fits the card.
- var k=1;
- while(overflows()&&k>0.55){k-=0.04;card.style.setProperty("--k",k.toFixed(2));}
- var over=overflows();
- if(over)issues.push({code:"overflow",blocking:true,message:"المحتوى المختار لا يتسع في هذا المقاس : كبّر البطاقة أو عطّل بعض الحقول."});
- var qrEl=document.getElementById("qr");
- var qrMm=qrEl?mm(qrEl.getBoundingClientRect().width):0;
- var moduleMm=qrEl?qrMm/${modules}:0;
- if(qrEl&&moduleMm<${MIN_MODULE_MM})issues.push({code:"qr-small",blocking:true,message:"رمز QR صغير جداً فلا يُقرأ بشكل موثوق (الوحدة < ${MIN_MODULE_MM} ملم)."});
- window.__layout={ready:true,issues:issues,qrMm:qrMm,moduleMm:moduleMm,scale:k,fits:!issues.some(function(i){return i.blocking})};
-})();
-</script></body></html>`;
+// Layout model for a member + configuration (shared by the PDF and the preview).
+function makeModel({member, config, publicUrl, photoBuffer}) {
+  return layoutCard({member, config, publicUrl, photoBuffer, size: pageSize(config)});
 }
 
-module.exports = {buildHtml, normalizeConfig, pageSize, FIELD_KEYS, MIN_MODULE_MM};
+// Self-contained, script-free HTML drawn from the same model as the PDF (also used for browser printing).
+function buildHtml(model) {
+  const photoSrc = model.photoBuffer ? "data:image/jpeg;base64," + model.photoBuffer.toString("base64") : logo();
+  const parts = [];
+  for (const b of model.boxes) {
+    if (b.kind === "text") {
+      b.lines.forEach((line, i) => parts.push(
+        `<div class="t" style="left:${n(b.cx - b.w / 2)}mm;top:${n(b.y + i * b.lh)}mm;width:${n(b.w)}mm;height:${n(b.lh)}mm;line-height:${n(b.lh)}mm;font-size:${n(b.size)}mm;font-weight:${b.bold ? 800 : 400};color:${b.color}">${esc(line)}</div>`));
+    } else if (b.kind === "logo") {
+      const side = b.d * (1 - 1.2 / 19), off = (b.d - side) / 2;
+      parts.push(`<div class="c" style="left:${n(b.x)}mm;top:${n(b.y)}mm;width:${n(b.d)}mm;height:${n(b.d)}mm;background:#fff"><img src="${logo()}" alt="" style="left:${n(off)}mm;top:${n(off)}mm;width:${n(side)}mm;height:${n(side)}mm"></div>`);
+    } else if (b.kind === "photo") {
+      const bw = b.d * 0.7 / 24, clip = b.d * 22.6 / 24, box = b.d * 21.4 / 24;
+      parts.push(`<div class="c" style="left:${n(b.x)}mm;top:${n(b.y)}mm;width:${n(b.d)}mm;height:${n(b.d)}mm;background:#21483f;border:${n(bw)}mm solid ${GOLD}"></div>`
+        + `<div class="c" style="left:${n(b.x + (b.d - clip) / 2)}mm;top:${n(b.y + (b.d - clip) / 2)}mm;width:${n(clip)}mm;height:${n(clip)}mm"><img class="ph" src="${photoSrc}" alt="" style="left:${n((clip - box) / 2)}mm;top:${n((clip - box) / 2)}mm;width:${n(box)}mm;height:${n(box)}mm"></div>`);
+    } else if (b.kind === "rule") {
+      parts.push(`<div style="position:absolute;left:${n(b.x)}mm;top:${n(b.y)}mm;width:${n(b.w)}mm;height:${n(b.h)}mm;background:${GOLD}"></div>`);
+    } else if (b.kind === "qr") {
+      parts.push(`<div id="qr" style="position:absolute;left:${n(b.x)}mm;top:${n(b.y)}mm;width:${n(b.s)}mm;height:${n(b.s)}mm">${qr.svg(model.publicUrl).replace("<svg ", '<svg style="display:block;width:100%;height:100%" ')}</div>`);
+    }
+  }
+  const fr = model.frame;
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بطاقة عضو</title>
+<style>${fonts()}
+@page{size:${model.w}mm ${model.h}mm;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:${model.w}mm;height:${model.h}mm;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Tajawal,Arial,sans-serif;overflow:hidden}
+.card{position:relative;width:${model.w}mm;height:${model.h}mm;overflow:hidden;background:#163f38}
+.frame{position:absolute;left:${n(fr.x)}mm;top:${n(fr.y)}mm;width:${n(fr.w)}mm;height:${n(fr.h)}mm;border:${n(fr.bw)}mm solid ${GOLD};border-radius:${n(fr.r)}mm}
+.t{position:absolute;text-align:center;white-space:nowrap;direction:rtl}
+.c{position:absolute;border-radius:50%;overflow:hidden}
+.c img{position:absolute;object-fit:contain}
+.c img.ph{object-fit:cover;object-position:50% 25%}
+</style></head><body><div class="card" id="card"><div class="frame"></div>${parts.join("")}</div></body></html>`;
+}
+
+module.exports = {buildHtml, makeModel, normalizeConfig, pageSize, FIELD_KEYS, MIN_MODULE_MM};

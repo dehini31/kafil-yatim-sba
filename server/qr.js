@@ -26,4 +26,4 @@ async function png(url, size = 1000) {
   return sharp(Buffer.from(svg(url)), {density: 72}).resize(px, px, {kernel: "nearest"}).png().toBuffer();
 }
 const modules = url => matrix(url).length;
-module.exports = {svg, png, modules};
+module.exports = {svg, png, modules, matrix};

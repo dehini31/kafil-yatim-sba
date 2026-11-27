@@ -43,12 +43,15 @@ for (const [label, viewport] of [["mobile", {width: 360, height: 740}], ["deskto
     await page.getByRole("button", {name: "إنشاء ونشر"}).click();
     const dialog = page.locator("dialog[data-detail]");
     await dialog.getByText("منشورة").first().waitFor({timeout: 20000});
-    await dialog.getByText("PDF جاهز").waitFor({timeout: 20000});
+    await dialog.getByText("PDF جاهز").waitFor({timeout: 20000}).catch(async error => {
+      throw new Error(error.message + "\n--- dialog ---\n" + (await dialog.innerText()).slice(0, 600));
+    });
     // preview iframe is the same document as the PDF
     const frame = dialog.frameLocator("iframe");
-    await frame.locator("#role").waitFor();
-    assert.equal(await frame.locator("#role").innerText(), "مسؤول الإعلام");
-    assert.equal(await frame.locator("#name").count(), 0, "recto prints role, not the member name, by default");
+    await frame.locator("#qr").waitFor();
+    const printed = await frame.locator(".t").allInnerTexts();
+    assert.ok(printed.includes("مسؤول الإعلام"), "role is on the printed card: " + printed.join(" | "));
+    assert.ok(!printed.some(line => line.includes(name)), "recto prints role, not the member name, by default");
     const link = dialog.locator(".link");
     const url = await link.innerText();
     assert.match(url, /\/members\/[a-z0-9]{8}\/$/);

@@ -42,7 +42,7 @@ L'interface d'administration et les messages du serveur sont en arabe (RTL) ; la
 
 - Modifier nom / poste / photo / expiration, renouveler, désactiver, réactiver : l'URL et le QR ne changent jamais. Une carte expirée ou désactivée reste en ligne avec un statut clair.
 - Le QR encode uniquement l'URL publique (correction d'erreurs M, marge de 4 modules).
-- PDF : 100 × 135 mm par défaut ; largeur, hauteur, orientation et champs réglables, par défaut (Réglages) ou par carte. L'aperçu est le même document HTML que celui imprimé par Chromium. Le serveur bloque la génération et explique pourquoi si le contenu ne tient pas ou si le QR serait trop petit (module < 0,33 mm).
+- PDF : 100 × 135 mm par défaut ; largeur, hauteur, orientation et champs réglables, par défaut (Réglages) ou par carte. Le recto reprend le modèle de l'association (logo, association, bureau, QR, poste, « صالحة إلى » + date ; photo et nom en option). **Le PDF est dessiné directement (texte arabe vectoriel, QR vectoriel) : aucun navigateur n'est nécessaire, il fonctionne sur tout hébergement Node.** L'aperçu et le PDF sortent du même modèle de mise en page. Le serveur bloque la génération et explique pourquoi si le contenu ne tient pas (le texte se réduit d'abord automatiquement) ou si le QR serait trop petit (module < 0,33 mm).
 
 ## Configuration
 
@@ -50,7 +50,7 @@ Variables d'environnement (voir `.env.example`) : `PUBLISHER` (`local` = héberg
 
 ## Déploiement sur dehini.com/kafil
 
-Prérequis : un serveur où dehini.com est servi par nginx ou Caddy en HTTPS, avec Docker (ou Node ≥ 22 + Chromium) — un hébergement mutualisé (cPanel) ne convient pas.
+Prérequis : un serveur où dehini.com est servi par nginx ou Caddy en HTTPS, avec Docker (ou Node ≥ 22) — un hébergement mutualisé (cPanel) ne convient pas.
 
 1. Cloner le dépôt sur le serveur, copier `.env.example` en `.env`.
 2. `docker compose up -d --build` (le volume `kafil-data` contient tout ; sauvegardez-le).
@@ -84,13 +84,13 @@ DATA_DIR=/home/dehini91/kafil-data
 5. **Créer l'administrateur** dans le terminal (après la commande `source …/activate` affichée par cPanel en haut de la page de l'application) : `cd ~/kafil-admin && node server/cli.js add-admin --email vous@exemple.org --name "Nom"`
 6. Ouvrir <https://dehini.com/kafil/admin/>. Au démarrage, l'application recopie le site statique (accueil, ressources, carte d'exemple) dans `~/public_html/kafil` et conserve les cartes publiées.
 
-PDF : l'hébergeur n'a pas de navigateur. Essayer `cd ~/kafil-admin && npm install @sparticuz/chromium` puis redémarrer ; si cela fonctionne, « Créer et publier » génère le PDF comme ailleurs. Sinon la fiche indique « PDF navigateur » et le bouton **Imprimer / PDF (navigateur)** imprime le même document (aperçu identique, QR vérifié) : choisir « Enregistrer au format PDF », sans marges, échelle 100 %.
+PDF : généré par le serveur lui-même, sans navigateur, donc sans réglage particulier. Le bouton **طباعة / PDF (المتصفح)** reste disponible pour imprimer depuis le navigateur.
 
 Mise à jour : `cd ~/kafil-admin && git pull && npm install`, puis **Restart** dans cPanel. Sauvegarder `~/kafil-data`.
 
 ## Démarrage rapide (ordinateur du bureau, Windows / Mac / Linux)
 
-1. Installer **Node.js 22 (LTS)** depuis <https://nodejs.org> et avoir **Google Chrome ou Microsoft Edge** (utilisé pour fabriquer les PDF).
+1. Installer **Node.js 22 (LTS)** depuis <https://nodejs.org>.
 2. Extraire `kafil-admin.zip`, puis **double-cliquer sur `start-admin.bat`** (Mac/Linux : `./start-admin.sh`).
 3. Au premier lancement, l'assistant demande le compte FTP de dehini.com (voir plus bas) puis crée votre compte administrateur. Il teste la connexion FTP.
 4. Le navigateur s'ouvre sur <http://127.0.0.1:8787/admin/> : se connecter, **Réglages** (contacts du bureau), puis **+ Nouvel adhérent → Créer et publier**. La fenêtre noire doit rester ouverte pendant l'utilisation.
@@ -114,7 +114,7 @@ Mise à jour automatique : ajouter dans **cPanel → Tâches Cron** (chaque minu
 
 ## Sans VPS : admin sur votre ordinateur, site sur dehini.com/kafil (FTP)
 
-Le site public (cartes, QR, pages) est statique : il n'a besoin que de l'hébergement actuel de dehini.com. Seule l'administration (connexion, PDF) demande Node et Chromium ; elle tourne sur un ordinateur du bureau et **envoie automatiquement chaque carte publiée par FTP** vers `dehini.com/kafil`.
+Le site public (cartes, QR, pages) est statique : il n'a besoin que de l'hébergement actuel de dehini.com. Seule l'administration (connexion, PDF) demande Node ; elle tourne sur un ordinateur du bureau et **envoie automatiquement chaque carte publiée par FTP** vers `dehini.com/kafil`.
 
 1. Dans le panneau de l'hébergeur (cPanel → *Comptes FTP*), créer un compte FTP limité au dossier `kafil` du site (ou noter l'hôte, l'identifiant et le mot de passe).
 2. Sur l'ordinateur : installer Docker Desktop (ou Node ≥ 22), cloner ce dépôt, copier `.env.example` en `.env` et régler :
@@ -158,5 +158,5 @@ npm test
 
 - `templates/member.html`, `assets/render.js` : page publique d'une carte (référencement et Open Graph personnalisés par carte).
 - `assets/` : logo, polices Tajawal (OFL), `qrcode.js` (Kazuhiko Arase, MIT).
-- `server/print.js` : modèle recto imprimable ; `server/pdf.js` : rendu Chromium ; `server/publisher/` : publication locale ou GitHub.
+- `server/card.js` : mise en page du recto (modèle commun) ; `server/text.js` : formes arabes (fontkit) et bidi ; `server/pdf.js` : dessin du PDF (pdf-lib) ; `server/print.js` : réglages et aperçu HTML ; `server/publisher/` : publication locale, GitHub ou FTP.
 - Vert `#173F39`, or `#E9BD76`, fond `#F6F5EF`, police Tajawal.

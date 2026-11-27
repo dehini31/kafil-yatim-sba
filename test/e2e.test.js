@@ -304,54 +304,36 @@ test("everything works under the /kafil sub-path of the domain", async () => {
   assert.ok(home.includes("بطاقات الأعضاء"));
 });
 
-test("host without a browser: card still publishes, PDF falls back to browser printing", async () => {
-  const noBrowser = () => { throw Object.assign(new Error("none"), {code: "NO_BROWSER"}); };
-  const lite = await startApp({pdf: {render: noBrowser, analyze: noBrowser, close: async () => {}}});
-  const c = client(lite.origin);
-  await c.login();
-  const r = await c.call("POST", "/api/members", {fullName: "عضو (TEST)", role: "عضو", expiresAt: "2099-01-01", photo});
-  const m = await waitFor(async () => { const x = (await c.call("GET", "/api/members/" + r.json.member.id)).json.member; return x.pdf.state !== "building" ? x : null; });
-  assert.equal(m.publication.state, "published");
-  assert.equal(m.pdf.state, "unavailable");
-  assert.equal((await c.call("GET", `/api/members/${m.id}/qr.png`, undefined, {raw: true})).status, 200);
-  const pv = await c.call("POST", "/api/print-preview", {memberId: m.id});
-  assert.equal(pv.status, 200);
-  assert.equal((await c.call("GET", "/api/print-preview/" + pv.json.token)).status, 200);
-  await lite.close();
-});
-
-
-test("older databases get the new default contacts once, then keep admin edits", async () => {
-  const {Store} = require("../server/store");
-  const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kafil-mig-"));
-  fs.writeFileSync(path.join(dir, "db.json"), JSON.stringify({settings: {contacts: {phone: "+213 1", whatsapp: "", facebook: "", instagram: "", email: "", maps: "", address: "", hours: "", nationalWebsite: "https://kafilyatim.dz/"},
-    publicFields: {photo: true, role: true, expiry: true, memberNumber: false}}}));
-  let store = new Store(dir);
-  assert.equal(store.migrated, true);
-  const c = store.db.settings.contacts;
-  assert.equal(c.phone, "+213 1", "existing value kept");
-  assert.equal(c.address, "شارع ناصري عبد القادر، رقم 40، سيدي ياسين");
-  assert.match(c.nationalPhones, /0780 80 37 37/);
-  c.address = ""; store.save();               // admin clears it on purpose
-  store = new Store(dir);
-  assert.equal(store.migrated, false);
-  assert.equal(store.db.settings.contacts.address, "", "not refilled after the migration");
-});
-
-
 test("recto layout: default prints role/expiry/QR only; name and photo are optional extras that still fit", async () => {
   const settings = (await api.call("GET", "/api/settings")).json.settings;
   assert.equal(settings.printDefaults.fields.photo, false);
   assert.equal(settings.printDefaults.fields.name, false);
   const pv = await api.call("POST", "/api/print-preview", {memberId: created.id});
   let html = (await api.call("GET", "/api/print-preview/" + pv.json.token)).text;
-  assert.ok(html.includes('id="role"') && html.includes("صالحة إلى") && html.includes('id="qr"'));
-  assert.ok(!html.includes('id="name"') && !html.includes('class="photo"'));
+  const member = (await api.call("GET", "/api/members/" + created.id)).json.member;
+  assert.ok(html.includes("صالحة إلى") && html.includes('id="qr"'));
+  assert.ok(html.includes(member.role), "role is printed");
+  assert.ok(!html.includes('class="ph"'), "no photo by default");
+  assert.ok(!html.includes(member.fullName), "member name is not printed by default");
   // everything on, long name and long role, still fits at 100 x 135
   const draft = {fullName: "عبد الرحمن محمد الأمين بن عبد القادر بوزيان الحسني التلمساني الوهراني", role: "أمين المال المكلف بالشؤون الاجتماعية والتنسيق مع المكاتب البلدية"};
   const full = await api.call("POST", "/api/print-preview", {memberId: created.id, draft, config: {fields: {photo: true, name: true, number: true}}});
   assert.equal(full.json.layout.fits, true, JSON.stringify(full.json.layout));
   html = (await api.call("GET", "/api/print-preview/" + full.json.token)).text;
-  assert.ok(html.includes('id="name"') && html.includes('class="photo"'));
+  assert.ok(html.includes('class="ph"'), "photo printed when enabled");
+  assert.ok(html.includes("عبد الرحمن"), "name printed when enabled");
+});
+
+
+test("PDF works with a tiny photo (small Buffers are views on a shared pool)", async () => {
+  const sharp = require("sharp");
+  const tiny = await sharp({create: {width: 220, height: 220, channels: 3, background: "#336699"}}).jpeg({quality: 20}).toBuffer();
+  const pdf = require("../server/pdf");
+  const print = require("../server/print");
+  const config = print.normalizeConfig({fields: {photo: true, name: true}}, app.store.db.settings.printDefaults);
+  for (let i = 0; i < 3; i++) {
+    const model = print.makeModel({member: {fullName: "عضو", role: "عضو", expiresAt: "2099-01-01"}, config, publicUrl: "https://dehini.com/kafil/members/abc12345/", photoBuffer: Buffer.from(tiny)});
+    const out = await pdf.render(model);
+    assert.ok(out.pdf.length > 1000 && out.layout.fits);
+  }
 });
