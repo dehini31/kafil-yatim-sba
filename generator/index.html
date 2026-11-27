@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>مولّد بطاقات الأعضاء | كافل اليتيم – سيدي بلعباس</title>
+<link rel="icon" href="../assets/logo.jpg" type="image/jpeg">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/qrcode.js" defer></script>
+<script src="../assets/fflate.js" defer></script>
+<script src="../assets/common.js" defer></script>
+<script src="../assets/render.js" defer></script>
+<script src="../assets/generator.js" defer></script>
+</head>
+<body>
+<header><div class="wrap header-inner" data-header></div></header>
+<main class="wrap">
+<h1>مولّد بطاقات الأعضاء</h1>
+<p class="caption">عاين البطاقة وصدّر ملفاتها لرفعها إلى مستودع GitHub.</p>
+<div class="generator-grid">
+<form class="panel" id="generator">
+<label class="field">الاسم واللقب <input id="fullName" required maxlength="120" autocomplete="off" dir="auto"></label>
+<label class="field">المنصب داخل الجمعية <input id="role" required maxlength="160" autocomplete="off" dir="auto"></label>
+<label class="field">معرّف الرابط <input id="slug" required maxlength="64" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" dir="ltr" autocapitalize="none" spellcheck="false"><small class="caption">أحرف لاتينية صغيرة وأرقام، ويمكن الفصل بشرطة.</small></label>
+<label class="field">صورة العضو <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+<p class="caption" id="member-url" dir="ltr"></p>
+<button class="button primary" id="export" type="submit" disabled>تصدير ملفات البطاقة ZIP</button>
+<p class="status" id="status" role="status"></p>
+</form>
+<div>
+<article class="identity" aria-label="معاينة بطاقة العضو">
+<div>
+<img id="portrait" class="portrait logo" src="../assets/logo.jpg" alt="معاينة صورة العضو">
+<h2 id="preview-name">اسم ولقب العضو</h2>
+<p class="role" id="preview-role">منصب العضو</p>
+<p class="office">المكتب الولائي · سيدي بلعباس</p>
+</div>
+</article>
+<section class="panel" style="margin-top:20px">
+<h2 class="section-title">رمز QR بعد النشر</h2>
+<label class="field">رابط البطاقة المنشورة <input id="published-url" type="url" dir="ltr" placeholder="https://…"></label>
+<button class="button" id="published-qr" type="button">إنشاء رمز QR للرابط المنشور</button>
+<div id="qr-panel" class="qr-panel" hidden>
+<canvas id="qr-image" role="img" aria-label="رمز QR لرابط البطاقة"></canvas>
+<button class="button" id="qr-download" type="button">تحميل رمز QR</button>
+</div>
+<p class="status" id="qr-status" role="status"></p>
+</section>
+</div>
+</div>
+</main>
+<footer><div class="wrap footer-inner" data-footer></div></footer>
+</body>
+</html>
