@@ -17,9 +17,10 @@ function browser() {
       }
       // Hosting without a browser: optional @sparticuz/chromium (npm i @sparticuz/chromium) ships a compact Chromium.
       try {
-        const sparticuz = require("@sparticuz/chromium");
-        return await chromium.launch({...options, executablePath: await sparticuz.executablePath(), args: [...sparticuz.args, "--no-sandbox"]});
-      } catch (error) { last = last || error; }
+        const loaded = require("@sparticuz/chromium");
+        const sparticuz = loaded.default || loaded; // recent versions export the class as `default`
+        return await chromium.launch({...options, executablePath: await sparticuz.executablePath(), args: [...(sparticuz.args || []), "--no-sandbox"]});
+      } catch (error) { last = error; }
       throw Object.assign(new Error("لا يوجد متصفح على هذا الخادم لإنشاء PDF. " + String(last && last.message).split("\n")[0]), {code: "NO_BROWSER"});
     };
     browserPromise = attempt().catch(error => { browserPromise = null; throw error; });
