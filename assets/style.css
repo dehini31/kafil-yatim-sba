@@ -69,3 +69,9 @@ details.contact summary::-webkit-details-marker{display:none}
 details.contact summary::after{content:"+";margin-inline-start:auto}
 details.contact[open] summary::after{content:"−"}
 details.contact small{padding:0 12px 10px;white-space:pre-line}
+.meta{color:#e3eee8;font-size:.9rem;margin-top:4px}
+.validity{display:inline-block;margin-top:14px;padding:4px 16px;border-radius:999px;font-weight:700;font-size:.95rem;background:#e7f3df;color:#1d4a26;border:1px solid #9cc58f}
+.validity[data-state=expired]{background:#fbe9c6;color:#6a4306;border-color:#e0b25a}
+.validity[data-state=disabled]{background:#f7dcd8;color:#7a2118;border-color:#d9928a}
+body[data-state=expired] .portrait,body[data-state=disabled] .portrait{filter:grayscale(1)}
+@media(max-width:340px){.wrap{width:calc(100% - 24px)}.portrait{width:96px;height:96px}.identity{padding:24px 12px}}

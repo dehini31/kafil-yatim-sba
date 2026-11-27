@@ -6,6 +6,7 @@
 <title>{{title}}</title>
 <meta name="description" content="{{description}}">
 <meta name="robots" content="{{robots}}">
+<meta name="card-rev" content="{{rev}}">
 <link rel="canonical" href="{{canonical}}">
 <meta property="og:type" content="profile">
 <meta property="og:locale" content="ar_DZ">
@@ -19,16 +20,19 @@
 <script src="../../assets/common.js" defer></script>
 <script src="../../assets/member.js" defer></script>
 </head>
-<body data-member="{{slug}}" data-demo="{{demo}}">
+<body data-member="{{slug}}" data-demo="{{demo}}" data-active="{{active}}" data-expires="{{expiresAt}}">
 <header><div class="wrap header-inner" data-header></div></header>
 <main class="wrap member-layout">
 <p class="preview-note" id="demo-note" hidden>معاينة تجريبية للبطاقة الرقمية</p>
 <article class="identity" id="identity">
 <div>
-<img class="portrait {{photoClass}}" src="../../{{photo}}" alt="{{photoAlt}}" width="116" height="116">
+<img class="portrait {{photoClass}}" src="../../{{photo}}{{photoQuery}}" alt="{{photoAlt}}" width="116" height="116">
 <h1>{{fullName}}</h1>
-<p class="role">{{role}}</p>
+{{?role}}<p class="role">{{role}}</p>{{/role}}
 <p class="office">المكتب الولائي · سيدي بلعباس</p>
+{{?expiryText}}<p class="meta">تاريخ انتهاء الصلاحية: <bdi dir="ltr">{{expiryText}}</bdi></p>{{/expiryText}}
+{{?memberNumber}}<p class="meta">رقم العضوية: <bdi dir="ltr">{{memberNumber}}</bdi></p>{{/memberNumber}}
+<p class="validity" id="validity" data-state="{{state}}">{{stateText}}</p>
 </div>
 </article>
 <p class="panel" id="unavailable" role="status" hidden>هذه البطاقة غير متاحة.</p>

@@ -8,6 +8,7 @@ url.hash = "";
 url.search = "";
 url.pathname = url.pathname.replace(/index\.html$/, "");
 const status = byId("status");
+const stateLabels = {active: "بطاقة سارية", expired: "بطاقة منتهية الصلاحية", disabled: "بطاقة غير سارية"};
 
 async function copyLink() {
   try {
@@ -45,19 +46,30 @@ function showSharing() {
   byId("qr-download").addEventListener("click", () => download(canvas.toDataURL("image/png"), slug + "-qr.png"));
 }
 
+// Validity is computed on the visitor's side from the public registry, so a card
+// expires on its date without any republication. Cards stay reachable when expired or disabled.
+function setValidity(entry) {
+  const today = new Intl.DateTimeFormat("en-CA", {timeZone:"Africa/Algiers"}).format(new Date());
+  const state = !entry.active ? "disabled" : entry.expiresAt && entry.expiresAt < today ? "expired" : "active";
+  const badge = byId("validity");
+  badge.dataset.state = state;
+  badge.textContent = stateLabels[state];
+  document.body.dataset.state = state;
+}
+
 if (isDemo) {
   byId("demo-note").hidden = false;
   showSharing();
 } else {
+  showSharing();
+  setValidity({active: document.body.dataset.active === "true", expiresAt: document.body.dataset.expires});
   readData("members").then(members => {
-    if (members.some(member => member.slug === slug && member.active === true)) showSharing();
+    const entry = members.find(member => member.slug === slug);
+    if (entry) setValidity(entry);
     else {
       byId("identity").hidden = true;
       byId("unavailable").hidden = false;
+      byId("sharing").hidden = true;
     }
-  }).catch(() => {
-    status.textContent = "تعذّر التحقق من حالة البطاقة. أعد تحميل الصفحة.";
-    byId("sharing").hidden = false;
-    byId("sharing").querySelector(".actions").hidden = true;
-  });
+  }).catch(() => {});
 }
