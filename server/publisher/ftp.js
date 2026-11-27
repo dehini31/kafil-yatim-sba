@@ -57,7 +57,7 @@ class FtpPublisher extends LocalPublisher {
         this.saveManifest(known);
       }
     } catch (error) {
-      throw new Error("Envoi FTP impossible : " + error.message);
+      throw new Error("تعذّر الإرسال عبر FTP : " + error.message);
     } finally {
       client.close();
     }

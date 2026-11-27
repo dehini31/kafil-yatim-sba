@@ -37,12 +37,12 @@ function createApp(options = {}) {
     const chunks = []; let size = 0;
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 14 * 1024 * 1024) throw Object.assign(new Error("Requête trop volumineuse."), {status: 413});
+      if (size > 14 * 1024 * 1024) throw Object.assign(new Error("الطلب كبير جداً."), {status: 413});
       chunks.push(chunk);
     }
     if (!chunks.length) return {};
     try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
-    catch { throw Object.assign(new Error("JSON invalide."), {status: 400}); }
+    catch { throw Object.assign(new Error("بيانات غير صالحة."), {status: 400}); }
   }
 
   function serveFile(res, base, rel, headers = {}) {
@@ -67,7 +67,7 @@ function createApp(options = {}) {
       return json(res, 200, {email: result.admin.email, name: result.admin.name}, {"set-cookie": auth.cookie(config, result.token, config.sessionHours * 3600)});
     }
     const admin = auth.sessionAdmin(store, req);
-    if (!admin) return json(res, 401, {error: "Authentification requise."});
+    if (!admin) return json(res, 401, {error: "يلزم تسجيل الدخول."});
     if (method !== "GET") guardCsrf(req);
     const actor = admin.email;
     let m;
@@ -103,19 +103,19 @@ function createApp(options = {}) {
       }
       // Downloads need a verified public URL: the QR only ever encodes that URL.
       if (action === "qr.png" && method === "GET") {
-        if (!member.verifiedUrl) return json(res, 409, {error: "Carte non publiée : QR indisponible."});
+        if (!member.verifiedUrl) return json(res, 409, {error: "البطاقة غير منشورة : رمز QR غير متاح."});
         return send(res, 200, await qr.png(member.verifiedUrl), {"content-type": "image/png", "content-disposition": `attachment; filename="${member.slug}-qr.png"`});
       }
       if (action === "qr.svg" && method === "GET") {
-        if (!member.verifiedUrl) return json(res, 409, {error: "Carte non publiée : QR indisponible."});
+        if (!member.verifiedUrl) return json(res, 409, {error: "البطاقة غير منشورة : رمز QR غير متاح."});
         return send(res, 200, qr.svg(member.verifiedUrl), {"content-type": "image/svg+xml", "content-disposition": `attachment; filename="${member.slug}-qr.svg"`});
       }
       if (action === "card.pdf" && method === "GET") {
-        if (member.pdf?.state !== "ready" || !fs.existsSync(service.pdfFile(member))) return json(res, 409, {error: "PDF non disponible."});
+        if (member.pdf?.state !== "ready" || !fs.existsSync(service.pdfFile(member))) return json(res, 409, {error: "ملف PDF غير متاح."});
         return send(res, 200, fs.readFileSync(service.pdfFile(member)), {"content-type": "application/pdf", "content-disposition": `attachment; filename="${member.slug}.pdf"`});
       }
     }
-    return json(res, 404, {error: "Route inconnue."});
+    return json(res, 404, {error: "مسار غير معروف."});
   }
 
   // Behind a trusted reverse proxy the client address is the last X-Forwarded-For hop it appended.
@@ -128,7 +128,7 @@ function createApp(options = {}) {
   function guardCsrf(req) {
     const origin = req.headers.origin;
     if (req.headers["x-requested-with"] !== "kafil-admin" || (origin && new URL(origin).host !== req.headers.host)) {
-      throw Object.assign(new Error("Requête refusée."), {status: 403});
+      throw Object.assign(new Error("الطلب مرفوض."), {status: 403});
     }
   }
 
@@ -155,7 +155,7 @@ function createApp(options = {}) {
     } catch (error) {
       const status = error.status || 500;
       if (status === 500) console.error(error);
-      json(res, status, {error: status === 500 ? "Erreur interne." : error.message});
+      json(res, status, {error: status === 500 ? "خطأ داخلي." : error.message});
     }
   });
   return {server, service, store, config, async close() { await new Promise(r => server.close(r)); await pdf.close(); }};

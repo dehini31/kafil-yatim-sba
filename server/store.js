@@ -6,12 +6,13 @@ const path = require("node:path");
 const defaults = () => ({
   admins: [], sessions: [], members: [], audit: [],
   settings: {
-    contacts: {phone: "", whatsapp: "", facebook: "", instagram: "", email: "", maps: "", address: "", hours: "",
-      nationalWebsite: "https://kafilyatim.dz/"},
+    contactsVersion: 2,
+    printVersion: 2,
+    contacts: {"phone": "", "whatsapp": "", "facebook": "https://www.facebook.com/elyatim22/", "facebookName": "جمعية كافل اليتيم سيدي بلعباس الولائية", "instagram": "", "email": "", "maps": "", "address": "شارع ناصري عبد القادر، رقم 40، سيدي ياسين", "hours": "", "nationalWebsite": "https://kafilyatim.dz/", "nationalPhones": "0780 80 37 37\n0556 99 80 23\n0669 96 84 93", "nationalEmail": "contact@kafilyatim.dz"},
     publicFields: {photo: true, role: true, expiry: true, memberNumber: false},
     printDefaults: {
       widthMm: 100, heightMm: 135, orientation: "portrait",
-      fields: {logo: true, association: true, office: true, photo: true, name: true, role: true, expiry: true, number: false, qr: true}
+      fields: {logo: true, association: true, office: true, photo: false, name: false, role: true, expiry: true, number: false, qr: true}
     }
   }
 });
@@ -22,8 +23,28 @@ class Store {
     this.file = path.join(dir, "db.json");
     fs.mkdirSync(path.join(dir, "photos"), {recursive: true, mode: 0o700});
     fs.mkdirSync(path.join(dir, "pdf"), {recursive: true, mode: 0o700});
-    this.db = fs.existsSync(this.file) ? {...defaults(), ...JSON.parse(fs.readFileSync(this.file, "utf8"))} : defaults();
+    const existed = fs.existsSync(this.file);
+    this.db = existed ? {...defaults(), ...JSON.parse(fs.readFileSync(this.file, "utf8"))} : defaults();
+    this.migrated = existed && this.migrate();
     this.save();
+  }
+  // Older databases: add new contact keys and, once, fill still-empty ones with the official defaults.
+  migrate() {
+    const d = defaults().settings, s = this.db.settings;
+    let changed = false;
+    for (const key of Object.keys(d.contacts)) if (!(key in s.contacts)) { s.contacts[key] = d.contacts[key]; changed = true; }
+    if (s.contactsVersion !== d.contactsVersion) {
+      for (const key of Object.keys(d.contacts)) if (s.contacts[key] === "" && d.contacts[key]) s.contacts[key] = d.contacts[key];
+      s.contactsVersion = d.contactsVersion;
+      changed = true;
+    }
+    // Print recto v2 (logo, association, office, QR, role, expiry — no photo/name): applied once to existing databases.
+    if (s.printVersion !== d.printVersion) {
+      s.printDefaults = {...(s.printDefaults || d.printDefaults), fields: {...d.printDefaults.fields}};
+      s.printVersion = d.printVersion;
+      changed = true;
+    }
+    return changed;
   }
   save() {
     const tmp = this.file + ".tmp";

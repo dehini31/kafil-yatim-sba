@@ -61,7 +61,7 @@ dialog::backdrop{background:#0008}
 .preview-box iframe{border:0;position:absolute;inset:0 auto auto 0;transform-origin:0 0}
 .thumb{width:90px;height:90px;border-radius:12px;object-fit:cover;background:#ddd}
 .muted{color:var(--muted)}
-.link{word-break:break-all;direction:ltr;text-align:left;font-size:.9rem}
+.link{word-break:break-all;font-size:.9rem}
 @media(max-width:640px){
  table,thead,tbody,tr,th,td{display:block}
  thead{display:none}
@@ -69,3 +69,7 @@ dialog::backdrop{background:#0008}
  td{border:0;padding:3px 4px}
 }
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
+
+textarea{width:100%;padding:8px 10px;border:1px solid #a7b8ae;border-radius:9px;background:#fff;font:inherit;resize:vertical}
+.link,input[dir=ltr]{direction:ltr;text-align:left}
+.preview-box iframe{left:0;right:auto}

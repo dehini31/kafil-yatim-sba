@@ -75,3 +75,8 @@ details.contact small{padding:0 12px 10px;white-space:pre-line}
 .validity[data-state=disabled]{background:#f7dcd8;color:#7a2118;border-color:#d9928a}
 body[data-state=expired] .portrait,body[data-state=disabled] .portrait{filter:grayscale(1)}
 @media(max-width:340px){.wrap{width:calc(100% - 24px)}.portrait{width:96px;height:96px}.identity{padding:24px 12px}}
+.national{margin-top:24px;padding:clamp(15px,3.5vw,26px);background:#eef0e6;border:1px solid var(--line);border-radius:22px;display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+.national-text{flex:1 1 320px;min-width:0}
+.national-links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}
+.national-links a{border-bottom:1px solid var(--green);color:var(--green);padding:2px 0;min-height:24px}
+.national .button{width:fit-content;flex:none}

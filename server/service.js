@@ -10,6 +10,8 @@ const fail = (status, message) => Object.assign(new Error(message), {status});
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const clean = (value, max) => String(value ?? "").replace(/[\u0000-\u001f\u007f‪-‮⁦-⁩]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
+const cleanLines = (value, max) => String(value ?? "").replace(/\r/g, "").split("\n").map(l => clean(l, 80)).filter(Boolean).join("\n").slice(0, max);
+
 class Service {
   constructor({config, store, publisher, pdf, fetchImpl = fetch}) {
     Object.assign(this, {config, store, publisher, pdf, fetchImpl});
@@ -18,13 +20,14 @@ class Service {
     // A crash can leave work half-done: surface it as a failure the admin can retry.
     for (const m of store.db.members) {
       if (["saving", "publishing"].includes(m.publication.state)) {
-        m.publication = {...m.publication, state: "failed", error: "Publication interrompue (redémarrage du serveur). Relancez-la."};
+        m.publication = {...m.publication, state: "failed", error: "انقطع النشر (إعادة تشغيل الخادم). أعد المحاولة."};
         m.pdf = {state: "none"};
       } else if (m.pdf.state === "building") {
-        m.pdf = {state: "failed", error: "Génération interrompue. Utilisez « Régénérer le PDF »."};
+        m.pdf = {state: "failed", error: "انقطع الإنشاء. استخدم «إعادة إنشاء PDF»."};
       }
     }
     store.save();
+    if (store.migrated) this.publishAll(); // new default contacts reach every public page
   }
 
   enqueue(task) {
@@ -35,7 +38,7 @@ class Service {
   get db() { return this.store.db; }
   find(idOrSlug) {
     const m = this.db.members.find(x => x.id === idOrSlug);
-    if (!m) throw fail(404, "Adhérent introuvable.");
+    if (!m) throw fail(404, "العضو غير موجود.");
     return m;
   }
   pageUrl(m) { return new URL(`members/${m.slug}/`, this.config.baseUrl).href; }
@@ -63,14 +66,14 @@ class Service {
     const out = {};
     if (!partial || "fullName" in input) {
       out.fullName = clean(input.fullName, 120);
-      if (out.fullName.length < 2) throw fail(422, "Nom et prénom requis.");
+      if (out.fullName.length < 2) throw fail(422, "الاسم واللقب مطلوبان.");
     }
     if (!partial || "role" in input) {
       out.role = clean(input.role, 120);
-      if (out.role.length < 2) throw fail(422, "Poste au sein de l'association requis.");
+      if (out.role.length < 2) throw fail(422, "المنصب داخل الجمعية مطلوب.");
     }
     if (!partial || "expiresAt" in input) {
-      if (!validDate(input.expiresAt)) throw fail(422, "Date d'expiration invalide (AAAA-MM-JJ).");
+      if (!validDate(input.expiresAt)) throw fail(422, "تاريخ الانتهاء غير صالح (سنة-شهر-يوم).");
       out.expiresAt = input.expiresAt;
     }
     if (!partial || "memberNumber" in input) out.memberNumber = clean(input.memberNumber, 40);
@@ -78,7 +81,7 @@ class Service {
   }
   checkNumber(number, exceptId) {
     if (number && this.db.members.some(m => m.id !== exceptId && m.memberNumber === number)) {
-      throw fail(409, "Ce numéro d'adhérent existe déjà.");
+      throw fail(409, "رقم العضوية موجود مسبقاً.");
     }
   }
 
@@ -92,13 +95,13 @@ class Service {
     this.checkNumber(data.memberNumber);
     const image = await photo.normalize(input.photo);
     let slug = input.slug ? clean(input.slug, 64).toLowerCase() : "";
-    if (slug && !validSlug(slug)) throw fail(422, "Identifiant d'URL invalide ou réservé.");
+    if (slug && !validSlug(slug)) throw fail(422, "معرّف الرابط غير صالح أو محجوز.");
     if (!slug) do slug = randomSlug(); while (this.db.members.some(m => m.slug === slug));
-    if (this.db.members.some(m => m.slug === slug)) throw fail(409, "Cet identifiant d'URL est déjà utilisé.");
+    if (this.db.members.some(m => m.slug === slug)) throw fail(409, "معرّف الرابط مستخدم مسبقاً.");
     const now = new Date().toISOString();
     const m = {
       id: newId(), slug, ...data, disabled: false, requestId, print: null, createdAt: now, updatedAt: now,
-      publication: {state: "saving", error: null, step: "Enregistrement"}, pdf: {state: "building"}, verifiedUrl: null
+      publication: {state: "saving", error: null, step: "جارٍ الحفظ"}, pdf: {state: "building"}, verifiedUrl: null
     };
     fs.writeFileSync(this.photoFile(m), image);
     this.db.members.push(m);
@@ -118,8 +121,8 @@ class Service {
   }
   async renew(id, expiresAt, actor) {
     const m = this.find(id);
-    if (!validDate(expiresAt)) throw fail(422, "Date d'expiration invalide.");
-    if (expiresAt < today()) throw fail(422, "La nouvelle date doit être dans le futur.");
+    if (!validDate(expiresAt)) throw fail(422, "تاريخ الانتهاء غير صالح.");
+    if (expiresAt < today()) throw fail(422, "يجب أن يكون التاريخ الجديد في المستقبل.");
     m.expiresAt = expiresAt;
     return this.touch(m, "member.renew", actor);
   }
@@ -130,7 +133,7 @@ class Service {
   }
   touch(m, action, actor) {
     m.updatedAt = new Date().toISOString();
-    m.publication = {state: "saving", error: null, step: "Enregistrement"};
+    m.publication = {state: "saving", error: null, step: "جارٍ الحفظ"};
     m.pdf = {state: "building"}; // the previous PDF is outdated; do not offer it
     this.store.audit(actor, action, {member: m.id});
     this.store.save();
@@ -139,9 +142,9 @@ class Service {
   }
   retry(id, actor) {
     const m = this.find(id);
-    if (["saving", "publishing"].includes(m.publication.state)) throw fail(409, "Publication déjà en cours.");
+    if (["saving", "publishing"].includes(m.publication.state)) throw fail(409, "النشر جارٍ بالفعل.");
     this.store.audit(actor, "member.retry", {member: m.id});
-    m.publication = {state: "saving", error: null, step: "Enregistrement"};
+    m.publication = {state: "saving", error: null, step: "جارٍ الحفظ"};
     m.pdf = {state: "building"};
     this.store.save();
     this.start(m.id);
@@ -156,16 +159,16 @@ class Service {
     const m = this.find(id);
     try {
       const rev = await this.enqueue(async () => {
-        m.publication = {state: "publishing", error: null, step: "Publication en cours", startedAt: new Date().toISOString()};
+        m.publication = {state: "publishing", error: null, step: "جارٍ النشر", startedAt: new Date().toISOString()};
         this.store.save();
         return this.publishMember(m);
       });
       await this.verifyPage(m, rev);
       m.verifiedUrl = this.pageUrl(m);
-      m.publication = {state: "published", error: null, step: "Publiée", rev, publishedAt: new Date().toISOString()};
+      m.publication = {state: "published", error: null, step: "منشورة", rev, publishedAt: new Date().toISOString()};
       this.store.save();
     } catch (error) {
-      m.publication = {state: "failed", error: error.message, step: "Échec", failedAt: new Date().toISOString()};
+      m.publication = {state: "failed", error: error.message, step: "فشل", failedAt: new Date().toISOString()};
       m.pdf = {state: "none"};
       this.store.save();
       return;
@@ -202,7 +205,7 @@ class Service {
     let last = "";
     for (;;) {
       try { last = await check(); if (!last) return; } catch (error) { last = error.message; }
-      if (Date.now() > deadline) throw new Error(`${what} : non disponible à l'adresse publique (${last}).`);
+      if (Date.now() > deadline) throw new Error(`${what} : غير متاحة على العنوان العام (${last}).`);
       await sleep(this.config.verifyIntervalMs);
     }
   }
@@ -212,18 +215,18 @@ class Service {
     return this.waitFor(async () => {
       const page = await this.fetchText(url);
       if (!page.ok) return `HTTP ${page.status}`;
-      if (!page.text.includes(`data-member="${m.slug}"`) || !page.text.includes(`name="card-rev" content="${rev}"`)) return "contenu en attente de déploiement";
+      if (!page.text.includes(`data-member="${m.slug}"`) || !page.text.includes(`name="card-rev" content="${rev}"`)) return "المحتوى بانتظار النشر";
       const reg = await this.fetchText(new URL("data/members.json", this.config.baseUrl).href);
       const entry = reg.ok && JSON.parse(reg.text).find(e => e.slug === m.slug);
-      if (!entry || entry.active !== !m.disabled || entry.expiresAt !== m.expiresAt) return "registre en attente de déploiement";
+      if (!entry || entry.active !== !m.disabled || entry.expiresAt !== m.expiresAt) return "السجل بانتظار النشر";
       return "";
-    }, "Page de la carte");
+    }, "صفحة البطاقة");
   }
 
   printConfig(m) { return print.normalizeConfig(m.print, this.db.settings.printDefaults); }
   async buildPdf(m, actor) {
     try {
-      if (!m.verifiedUrl) throw fail(409, "La carte doit d'abord être publiée.");
+      if (!m.verifiedUrl) throw fail(409, "يجب نشر البطاقة أولاً.");
       const config = this.printConfig(m);
       const html = print.buildHtml({member: m, config, publicUrl: m.verifiedUrl, photoBuffer: this.photoBuffer(m)});
       const {pdf, layout} = await this.pdf.render(html, config);
@@ -236,7 +239,7 @@ class Service {
       if (actor) this.store.audit(actor, "member.pdf", {member: m.id});
     } catch (error) {
       m.pdf = error.code === "NO_BROWSER"
-        ? {state: "unavailable", error: "Génération serveur indisponible : utilisez « Imprimer / PDF (navigateur) » dans la fiche."}
+        ? {state: "unavailable", error: "إنشاء PDF على الخادم غير متاح : استخدم «طباعة / PDF (المتصفح)» في بطاقة العضو."}
         : {state: "failed", error: error.message};
     }
     this.store.save();
@@ -268,7 +271,7 @@ class Service {
     try { layout = await this.pdf.analyze(html, cfg); }
     catch (error) {
       if (error.code !== "NO_BROWSER") throw error;
-      layout = {ready: true, fits: true, qrMm: null, issues: [{blocking: false, message: "Vérification automatique de la mise en page indisponible sur ce serveur : contrôlez l'aperçu."}]};
+      layout = {ready: true, fits: true, qrMm: null, issues: [{blocking: false, message: "التحقق الآلي من التنسيق غير متاح على هذا الخادم : راجع المعاينة."}]};
     }
     const token = newId();
     this.previews.set(token, {html, at: Date.now()});
@@ -283,8 +286,11 @@ class Service {
     const next = {...current};
     if (input.contacts) {
       next.contacts = {};
-      for (const key of Object.keys(current.contacts)) next.contacts[key] = clean(input.contacts[key] ?? "", key === "hours" ? 600 : 300);
-      if (next.contacts.nationalWebsite && !/^https:\/\//.test(next.contacts.nationalWebsite)) throw fail(422, "Site national : URL https requise.");
+      for (const key of Object.keys(current.contacts)) {
+        const multi = key === "hours" || key === "nationalPhones";
+        next.contacts[key] = multi ? cleanLines(input.contacts[key], 600) : clean(input.contacts[key] ?? "", 300);
+      }
+      if (next.contacts.nationalWebsite && !/^https:\/\//.test(next.contacts.nationalWebsite)) throw fail(422, "الموقع الوطني : رابط https مطلوب.");
     }
     if (input.publicFields) {
       next.publicFields = {};
@@ -310,7 +316,7 @@ class Service {
           return out;
         });
         for (const m of this.db.members) await this.verifyPage(m, revs[m.slug]);
-        for (const m of this.db.members) { m.verifiedUrl = this.pageUrl(m); m.publication = {...m.publication, state: "published", rev: revs[m.slug], error: null, step: "Publiée"}; }
+        for (const m of this.db.members) { m.verifiedUrl = this.pageUrl(m); m.publication = {...m.publication, state: "published", rev: revs[m.slug], error: null, step: "منشورة"}; }
         this.db.settingsPublication = {state: "published", error: null, at: new Date().toISOString()};
       } catch (error) {
         this.db.settingsPublication = {state: "failed", error: error.message, at: new Date().toISOString()};

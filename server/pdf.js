@@ -6,7 +6,7 @@ function browser() {
   if (!browserPromise) {
     let chromium;
     try { ({chromium} = require("playwright")); }
-    catch { browserPromise = Promise.reject(Object.assign(new Error("Moteur PDF (playwright) non installé sur ce serveur."), {code: "NO_BROWSER"})); browserPromise.catch(() => {}); const failed = browserPromise; browserPromise = null; return failed; }
+    catch { browserPromise = Promise.reject(Object.assign(new Error("محرك PDF (playwright) غير مثبّت على هذا الخادم."), {code: "NO_BROWSER"})); browserPromise.catch(() => {}); const failed = browserPromise; browserPromise = null; return failed; }
     const options = {args: ["--no-sandbox", "--font-render-hinting=none"]};
     if (process.env.CHROMIUM_PATH) options.executablePath = process.env.CHROMIUM_PATH;
     // Bundled Chromium if present, otherwise the Chrome or Edge already installed on the computer.
@@ -20,7 +20,7 @@ function browser() {
         const sparticuz = require("@sparticuz/chromium");
         return await chromium.launch({...options, executablePath: await sparticuz.executablePath(), args: [...sparticuz.args, "--no-sandbox"]});
       } catch (error) { last = last || error; }
-      throw Object.assign(new Error("Aucun navigateur disponible sur ce serveur pour générer le PDF. " + String(last && last.message).split("\n")[0]), {code: "NO_BROWSER"});
+      throw Object.assign(new Error("لا يوجد متصفح على هذا الخادم لإنشاء PDF. " + String(last && last.message).split("\n")[0]), {code: "NO_BROWSER"});
     };
     browserPromise = attempt().catch(error => { browserPromise = null; throw error; });
   }

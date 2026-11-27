@@ -27,6 +27,6 @@ test("ftp publisher mirrors the site incrementally to a web host", async () => {
   assert.ok(!fs.existsSync(remote("assets/members/abc.jpg")));
   // wrong password -> clear failure
   const bad = new FtpPublisher({...config, ftp: {...config.ftp, password: "x"}, dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "k2-"))});
-  await assert.rejects(bad.publish({files: {"a.txt": "a"}}), /Envoi FTP impossible/);
+  await assert.rejects(bad.publish({files: {"a.txt": "a"}}), /تعذّر الإرسال عبر FTP/);
   await server.close();
 });
