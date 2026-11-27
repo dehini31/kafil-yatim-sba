@@ -22,8 +22,8 @@ async function verifyPassword(password, stored) {
 }
 async function addAdmin(store, {email, name, password}) {
   email = String(email || "").trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Adresse e-mail invalide.");
-  if (typeof password !== "string" || password.length < 12) throw new Error("Mot de passe : 12 caractères minimum.");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("البريد الإلكتروني غير صالح.");
+  if (typeof password !== "string" || password.length < 12) throw new Error("كلمة المرور : 12 حرفاً على الأقل.");
   const existing = store.db.admins.find(a => a.email === email);
   const hash = await hashPassword(password);
   if (existing) {
@@ -49,10 +49,10 @@ const DUMMY = "scrypt$00000000000000000000000000000000$" + "00".repeat(64);
 async function login(store, config, email, password, ip) {
   email = String(email || "").trim().toLowerCase();
   const key = ip + "|" + email;
-  if (tooMany(key)) return {error: "Trop de tentatives. Réessayez dans 15 minutes.", status: 429};
+  if (tooMany(key)) return {error: "محاولات كثيرة. أعد المحاولة بعد 15 دقيقة.", status: 429};
   const admin = store.db.admins.find(a => a.email === email && !a.disabled);
   const ok = await verifyPassword(String(password || ""), admin ? admin.hash : DUMMY);
-  if (!admin || !ok) { noteFailure(key); return {error: "Identifiants incorrects.", status: 401}; }
+  if (!admin || !ok) { noteFailure(key); return {error: "بيانات الدخول غير صحيحة.", status: 401}; }
   attempts.delete(key);
   const token = crypto.randomBytes(32).toString("base64url");
   store.db.sessions = store.db.sessions.filter(s => s.expires > Date.now());

@@ -16,12 +16,12 @@ function normalizeConfig(input, defaults) {
   const num = (value, fallback) => {
     const n = Number(value ?? fallback);
     if (!Number.isFinite(n) || n < MIN_MM || n > MAX_MM) {
-      throw Object.assign(new Error(`Dimensions : entre ${MIN_MM} et ${MAX_MM} mm.`), {status: 422});
+      throw Object.assign(new Error(`الأبعاد : بين ${MIN_MM} و${MAX_MM} ملم.`), {status: 422});
     }
     return Math.round(n * 10) / 10;
   };
   const orientation = src.orientation ?? base.orientation;
-  if (!["portrait", "landscape"].includes(orientation)) throw Object.assign(new Error("Orientation invalide."), {status: 422});
+  if (!["portrait", "landscape"].includes(orientation)) throw Object.assign(new Error("الاتجاه غير صالح."), {status: 422});
   const fields = {};
   for (const key of FIELD_KEYS) fields[key] = typeof src.fields?.[key] === "boolean" ? src.fields[key] : !!base.fields?.[key];
   return {widthMm: num(src.widthMm, base.widthMm), heightMm: num(src.heightMm, base.heightMm), orientation, fields};
@@ -120,7 +120,7 @@ window.__layout={ready:false};
  if(name){
   var size=parseFloat(getComputedStyle(name).fontSize), min=size*0.55, lines=function(){return Math.round(name.getBoundingClientRect().height/parseFloat(getComputedStyle(name).lineHeight))};
   while((lines()>2||name.scrollWidth>name.clientWidth+1)&&size>min){size-=size*0.04;name.style.fontSize=size+"px";}
-  if(lines()>3)issues.push({code:"name-wrap",blocking:false,message:"Nom très long : il occupe plus de 3 lignes."});
+  if(lines()>3)issues.push({code:"name-wrap",blocking:false,message:"الاسم طويل جداً : يشغل أكثر من 3 أسطر."});
  }
  var frame=document.getElementById("frame"),fr=frame.getBoundingClientRect();
  var over=false;
@@ -130,11 +130,11 @@ window.__layout={ready:false};
  });
  var main=document.getElementById("main"), mr=main.getBoundingClientRect(), total=0;
  [].forEach.call(main.children,function(c){total+=c.getBoundingClientRect().height});
- if(over||(${landscape ? "false" : "true"}&&total>mr.height+0.5))issues.push({code:"overflow",blocking:true,message:"Le contenu choisi ne tient pas dans ce format : agrandissez la carte ou désactivez des champs."});
+ if(over||(${landscape ? "false" : "true"}&&total>mr.height+0.5))issues.push({code:"overflow",blocking:true,message:"المحتوى المختار لا يتسع في هذا المقاس : كبّر البطاقة أو عطّل بعض الحقول."});
  var qrEl=document.getElementById("qr");
  var qrMm=qrEl?mm(qrEl.getBoundingClientRect().width):0;
  var moduleMm=qrEl?qrMm/${modules}:0;
- if(qrEl&&moduleMm<${MIN_MODULE_MM})issues.push({code:"qr-small",blocking:true,message:"QR trop petit pour être scanné de façon fiable (module < ${MIN_MODULE_MM} mm)."});
+ if(qrEl&&moduleMm<${MIN_MODULE_MM})issues.push({code:"qr-small",blocking:true,message:"رمز QR صغير جداً فلا يُقرأ بشكل موثوق (الوحدة < ${MIN_MODULE_MM} ملم)."});
  window.__layout={ready:true,issues:issues,qrMm:qrMm,moduleMm:moduleMm,fits:!issues.some(function(i){return i.blocking})};
 })();
 </script></body></html>`;

@@ -79,17 +79,47 @@ function contactItems(config) {
   return [
     ["phone", "الهاتف", /^\+?[0-9]{5,15}$/.test(phone) ? config.phone : "", "tel:" + phone, true],
     ["whatsapp", "واتساب", /^[1-9][0-9]{7,14}$/.test(whatsapp) ? config.whatsapp : "", "https://wa.me/" + whatsapp, true],
-    ["facebook", "فيسبوك", httpsUrl(config.facebook) && "صفحة المكتب الولائي", httpsUrl(config.facebook)],
+    ["facebook", "فيسبوك", httpsUrl(config.facebook) && (config.facebookName || "صفحة المكتب الولائي"), httpsUrl(config.facebook)],
     ["instagram", "إنستغرام", httpsUrl(config.instagram) && "حساب المكتب الولائي", httpsUrl(config.instagram)],
     ["email", "البريد الإلكتروني", /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(config.email) ? config.email : "", "mailto:" + config.email, true],
     ["maps", "الموقع على الخريطة", maps && "عرض الموقع في خرائط Google", maps],
     ["address", "عنوان المكتب", config.address, maps || (config.address ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(config.address) : "")],
-    ["hours", "أوقات العمل", config.hours, ""],
-    ["nationalWebsite", "الموقع الوطني", national && new URL(national).hostname, national, true]
+    ["hours", "أوقات الاستقبال", config.hours, ""]
   ].filter(([, , value]) => typeof value === "string" && value.trim());
 }
 
+// National association block: shown on every page, clearly labelled as NOT the Sidi Bel Abbès office numbers.
+function renderNational(config) {
+  const phones = String(config.nationalPhones || "").split("\n").map(p => p.trim().replace(/\s+/g, " ")).filter(p => /^\+?[0-9 ]{6,20}$/.test(p));
+  const email = /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(config.nationalEmail || "") ? config.nationalEmail : "";
+  const site = httpsUrl(config.nationalWebsite);
+  for (const section of document.querySelectorAll("[data-national]")) {
+    section.replaceChildren();
+    if (!phones.length && !email && !site) { section.hidden = true; continue; }
+    const text = element("div", "", "national-text");
+    text.append(element("h2", "المكتب الوطني للجمعية", "section-title"), element("p", "هذه بيانات التواصل الوطنية، وليست أرقام مكتب سيدي بلعباس.", "caption"));
+    const links = element("p", "", "national-links");
+    for (const phone of phones) {
+      const a = element("a", phone);
+      a.href = "tel:" + phone.replace(/\s/g, "");
+      a.dir = "ltr";
+      links.append(a);
+    }
+    if (email) { const a = element("a", email); a.href = "mailto:" + email; a.dir = "ltr"; links.append(a); }
+    if (links.childNodes.length) text.append(links);
+    section.append(text);
+    if (site) {
+      const button = element("a", "زيارة الموقع الوطني ↗", "button primary");
+      button.href = site;
+      button.rel = "noopener";
+      section.append(button);
+    }
+    section.hidden = false;
+  }
+}
+
 function renderContacts(config) {
+  renderNational(config);
   const national = httpsUrl(config.nationalWebsite);
   if (national && document.querySelector("[data-header]")) {
     const link = element("a", "الموقع الوطني", "national-link");

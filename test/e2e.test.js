@@ -234,7 +234,7 @@ test("verification failure (page never appears) is reported as a failure", async
   await c.login();
   const r = await c.call("POST", "/api/members", {fullName: "عضو (TEST)", role: "عضو", expiresAt: "2099-01-01", photo});
   const m = await waitFor(async () => { const x = (await c.call("GET", "/api/members/" + r.json.member.id)).json.member; return x.publication.state === "failed" ? x : null; });
-  assert.match(m.publication.error, /Page de la carte/);
+  assert.match(m.publication.error, /صفحة البطاقة/);
   assert.equal((await c.call("GET", `/api/members/${m.id}/qr.png`, undefined, {raw: true})).status, 409);
   await slow.close();
 });
@@ -251,6 +251,8 @@ test("settings: public fields control what is published; contacts are centralise
   const contacts = JSON.parse(site("data/contacts.json"));
   assert.equal(contacts.email, "bureau@example.test");
   assert.equal(contacts.facebook, "");
+  assert.equal(contacts.address, "شارع ناصري عبد القادر، رقم 40، سيدي ياسين", "official default address");
+  assert.equal(contacts.nationalEmail, "contact@kafilyatim.dz");
   const page = await (await fetch(created.url)).text();
   assert.ok(!page.includes("نائب الرئيس"), "role no longer public");
   assert.ok(!page.includes("30/06/2100"), "expiry date no longer public");
@@ -316,4 +318,23 @@ test("host without a browser: card still publishes, PDF falls back to browser pr
   assert.equal(pv.status, 200);
   assert.equal((await c.call("GET", "/api/print-preview/" + pv.json.token)).status, 200);
   await lite.close();
+});
+
+
+test("older databases get the new default contacts once, then keep admin edits", async () => {
+  const {Store} = require("../server/store");
+  const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kafil-mig-"));
+  fs.writeFileSync(path.join(dir, "db.json"), JSON.stringify({settings: {contacts: {phone: "+213 1", whatsapp: "", facebook: "", instagram: "", email: "", maps: "", address: "", hours: "", nationalWebsite: "https://kafilyatim.dz/"},
+    publicFields: {photo: true, role: true, expiry: true, memberNumber: false}}}));
+  let store = new Store(dir);
+  assert.equal(store.migrated, true);
+  const c = store.db.settings.contacts;
+  assert.equal(c.phone, "+213 1", "existing value kept");
+  assert.equal(c.address, "شارع ناصري عبد القادر، رقم 40، سيدي ياسين");
+  assert.match(c.nationalPhones, /0780 80 37 37/);
+  c.address = ""; store.save();               // admin clears it on purpose
+  store = new Store(dir);
+  assert.equal(store.migrated, false);
+  assert.equal(store.db.settings.contacts.address, "", "not refilled after the migration");
 });

@@ -5,14 +5,14 @@ const ROOT = new URL("../", location.href).pathname; // works under any sub-path
 const API = new URL("api", location.href).pathname.replace(/\/$/, ""); // /kafil/admin/api
 const ASSETS = ROOT + "assets/";
 const L = {
-  status: {active: "Actif", expired: "Expiré", disabled: "Désactivé"},
-  pub: {saving: "Enregistrement", publishing: "Publication en cours", published: "Publiée", failed: "Échec"},
-  pdf: {none: "PDF : —", unavailable: "PDF navigateur", building: "PDF en cours", ready: "PDF prêt", blocked: "PDF bloqué", failed: "PDF : échec"}
+  status: {active: "ساري", expired: "منتهي", disabled: "معطّل"},
+  pub: {saving: "جارٍ الحفظ", publishing: "جارٍ النشر", published: "منشورة", failed: "فشل"},
+  pdf: {none: "PDF : —", unavailable: "PDF عبر المتصفح", building: "جارٍ إنشاء PDF", ready: "PDF جاهز", blocked: "PDF محجوب", failed: "PDF : فشل"}
 };
 const PRINT_FIELDS = [
-  ["logo", "Logo", null], ["association", "Nom de l'association", null], ["office", "Bureau wilaya", null],
-  ["photo", "Photo", "photo"], ["name", "Nom complet", "always"], ["role", "Poste", "role"],
-  ["expiry", "Date d'expiration", "expiry"], ["number", "Numéro d'adhérent", "memberNumber"], ["qr", "QR code", null]
+  ["logo", "الشعار", null], ["association", "اسم الجمعية", null], ["office", "المكتب الولائي", null],
+  ["photo", "الصورة", "photo"], ["name", "الاسم الكامل", "always"], ["role", "المنصب", "role"],
+  ["expiry", "تاريخ الانتهاء", "expiry"], ["number", "رقم العضوية", "memberNumber"], ["qr", "رمز QR", null]
 ];
 let state = {me: null, members: [], settings: null, q: "", status: "", tab: "members", timer: null};
 
@@ -38,8 +38,8 @@ async function api(method, url, data) {
     body: data === undefined ? undefined : JSON.stringify(data)
   });
   const body = await response.json().catch(() => ({}));
-  if (response.status === 401 && url !== "/login") { state.me = null; render(); throw new Error(body.error || "Session expirée."); }
-  if (!response.ok) throw new Error(body.error || "Erreur " + response.status);
+  if (response.status === 401 && url !== "/login") { state.me = null; render(); throw new Error(body.error || "انتهت الجلسة."); }
+  if (!response.ok) throw new Error(body.error || "خطأ " + response.status);
   return body;
 }
 function notify(container, kind, message) {
@@ -67,11 +67,11 @@ function renderLogin() {
       await boot();
     } catch (error) { notify(msg, "err", error.message); }
   }},
-  h("div", {class: "row"}, h("img", {src: ASSETS + "logo.jpg", alt: "", width: 48, height: 48}), h("h2", {}, "Administration")),
-  h("p", {class: "muted"}, "Kafil El Yatim · Sidi Bel Abbès"),
-  h("label", {class: "field"}, "E-mail", h("input", {type: "email", name: "email", required: true, autocomplete: "username"})),
-  h("label", {class: "field"}, "Mot de passe", h("input", {type: "password", name: "password", required: true, autocomplete: "current-password"})),
-  h("button", {class: "btn primary", type: "submit"}, "Se connecter"), msg);
+  h("div", {class: "row"}, h("img", {src: ASSETS + "logo.jpg", alt: "", width: 48, height: 48}), h("h2", {}, "الإدارة")),
+  h("p", {class: "muted"}, "كافل اليتيم · سيدي بلعباس"),
+  h("label", {class: "field"}, "البريد الإلكتروني", h("input", {type: "email", name: "email", required: true, autocomplete: "username"})),
+  h("label", {class: "field"}, "كلمة المرور", h("input", {type: "password", name: "password", required: true, autocomplete: "current-password"})),
+  h("button", {class: "btn primary", type: "submit"}, "تسجيل الدخول"), msg);
   app.replaceChildren(form);
 }
 
@@ -80,9 +80,9 @@ function render() {
   if (!state.me) return renderLogin();
   const tab = (id, label) => h("button", {class: "tab", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); if (id === "settings") loadSettings(); }}, label);
   app.replaceChildren(
-    h("header", {class: "top"}, h("img", {src: ASSETS + "logo.jpg", alt: ""}), h("h1", {}, "Kafil El Yatim · Sidi Bel Abbès"),
-      h("nav", {}, tab("members", "Adhérents"), tab("settings", "Réglages"),
-        h("button", {class: "tab", onclick: async () => { await api("POST", "/logout"); state.me = null; render(); }}, "Déconnexion"))),
+    h("header", {class: "top"}, h("img", {src: ASSETS + "logo.jpg", alt: ""}), h("h1", {}, "كافل اليتيم · سيدي بلعباس"),
+      h("nav", {}, tab("members", "الأعضاء"), tab("settings", "الإعدادات"),
+        h("button", {class: "tab", onclick: async () => { await api("POST", "/logout"); state.me = null; render(); }}, "تسجيل الخروج"))),
     h("main", {id: "main"}));
   if (state.tab === "members") renderMembers(); else renderSettings();
 }
@@ -90,13 +90,13 @@ function render() {
 /* ---------- members list ---------- */
 function renderMembers() {
   const main = document.getElementById("main");
-  const search = h("input", {type: "search", placeholder: "Rechercher par nom ou numéro", "aria-label": "Recherche", value: state.q,
+  const search = h("input", {type: "search", placeholder: "بحث بالاسم أو الرقم", "aria-label": "بحث", value: state.q,
     oninput: debounce(event => { state.q = event.target.value; loadMembers(); }, 250)});
-  const select = h("select", {"aria-label": "Filtrer par statut", onchange: event => { state.status = event.target.value; loadMembers(); }},
-    h("option", {value: ""}, "Tous les statuts"), ...Object.entries(L.status).map(([k, v]) => h("option", {value: k, selected: state.status === k}, v)));
+  const select = h("select", {"aria-label": "تصفية حسب الحالة", onchange: event => { state.status = event.target.value; loadMembers(); }},
+    h("option", {value: ""}, "كل الحالات"), ...Object.entries(L.status).map(([k, v]) => h("option", {value: k, selected: state.status === k}, v)));
   main.replaceChildren(
     h("div", {class: "card"}, h("div", {class: "row grow"}, search, select,
-      h("button", {class: "btn primary", onclick: () => openForm()}, "+ Nouvel adhérent"))),
+      h("button", {class: "btn primary", onclick: () => openForm()}, "+ عضو جديد"))),
     h("div", {class: "card", id: "list"}));
   drawList();
 }
@@ -111,16 +111,16 @@ async function loadMembers() {
 function drawList() {
   const box = document.getElementById("list");
   if (!box) return;
-  if (!state.members.length) return box.replaceChildren(h("p", {class: "muted"}, "Aucun adhérent."));
+  if (!state.members.length) return box.replaceChildren(h("p", {class: "muted"}, "لا يوجد أعضاء."));
   box.replaceChildren(h("table", {},
-    h("thead", {}, h("tr", {}, ...["", "Nom", "N°", "Validité", "Publication", ""].map(t => h("th", {}, t)))),
+    h("thead", {}, h("tr", {}, ...["", "الاسم", "الرقم", "الصلاحية", "النشر", ""].map(t => h("th", {}, t)))),
     h("tbody", {}, state.members.map(m => h("tr", {"data-id": m.id},
       h("td", {}, h("img", {class: "avatar", src: `${API}/members/${m.id}/photo`, alt: ""})),
       h("td", {class: "name", dir: "auto"}, m.fullName, h("div", {class: "muted", dir: "auto", style: "font-weight:400"}, m.role)),
       h("td", {}, m.memberNumber || "—"),
       h("td", {}, badge(m.status, L.status[m.status]), " ", h("span", {class: "muted"}, m.expiresAt)),
       h("td", {}, badge(m.publication.state, L.pub[m.publication.state])),
-      h("td", {}, h("button", {class: "btn", onclick: () => openDetail(m.id)}, "Ouvrir")))))));
+      h("td", {}, h("button", {class: "btn", onclick: () => openDetail(m.id)}, "فتح")))))));
 }
 
 /* ---------- create / edit ---------- */
@@ -135,11 +135,11 @@ function openForm(member) {
     event.preventDefault();
     const button = form.querySelector("button[type=submit]");
     button.disabled = true;
-    notify(msg, "warn", "Enregistrement…");
+    notify(msg, "warn", "جارٍ الحفظ…");
     try {
       const data = {fullName: form.fullName.value, role: form.role.value, expiresAt: form.expiresAt.value, memberNumber: form.memberNumber.value};
       if (photo) data.photo = photo;
-      if (!editing && !photo) throw new Error("Photo requise.");
+      if (!editing && !photo) throw new Error("الصورة مطلوبة.");
       const out = editing ? await api("PUT", "/members/" + member.id, data) : await api("POST", "/members", {...data, requestId});
       dialog.close(); dialog.remove();
       await loadMembers();
@@ -147,19 +147,19 @@ function openForm(member) {
     } catch (error) { notify(msg, "err", error.message); button.disabled = false; }
   }},
   h("div", {class: "grid2"},
-    h("label", {class: "field"}, "Nom et prénom", h("input", {type: "text", name: "fullName", dir: "rtl", required: true, maxlength: 120, value: member?.fullName || ""})),
-    h("label", {class: "field"}, "Poste au sein de l'association", h("input", {type: "text", name: "role", dir: "rtl", required: true, maxlength: 120, value: member?.role || ""})),
-    h("label", {class: "field"}, "Date d'expiration", h("input", {type: "date", name: "expiresAt", required: true, value: member?.expiresAt || ""})),
-    h("label", {class: "field"}, "Numéro d'adhérent ", h("small", {}, "(optionnel, interne)"), h("input", {type: "text", name: "memberNumber", maxlength: 40, value: member?.memberNumber || ""}))),
-  h("label", {class: "field"}, "Photo", h("small", {}, "JPEG, PNG ou WebP. Recadrée automatiquement à l'affichage, jamais déformée."),
+    h("label", {class: "field"}, "الاسم واللقب", h("input", {type: "text", name: "fullName", dir: "rtl", required: true, maxlength: 120, value: member?.fullName || ""})),
+    h("label", {class: "field"}, "المنصب داخل الجمعية", h("input", {type: "text", name: "role", dir: "rtl", required: true, maxlength: 120, value: member?.role || ""})),
+    h("label", {class: "field"}, "تاريخ الانتهاء", h("input", {type: "date", name: "expiresAt", required: true, value: member?.expiresAt || ""})),
+    h("label", {class: "field"}, "رقم العضوية ", h("small", {}, "(اختياري، داخلي)"), h("input", {type: "text", name: "memberNumber", maxlength: 40, value: member?.memberNumber || ""}))),
+  h("label", {class: "field"}, "الصورة", h("small", {}, "JPEG أو PNG أو WebP. تُقتطع تلقائياً عند العرض دون أي تشويه."),
     h("input", {type: "file", name: "photo", accept: "image/jpeg,image/png,image/webp", onchange: async event => {
       const file = event.target.files[0];
       if (!file) return;
-      try { photo = await readPhoto(file); preview.src = photo; preview.hidden = false; } catch { notify(msg, "err", "Image illisible."); }
+      try { photo = await readPhoto(file); preview.src = photo; preview.hidden = false; } catch { notify(msg, "err", "الصورة غير مقروءة."); }
     }})), preview,
-  h("div", {class: "actions"}, h("button", {class: "btn primary", type: "submit"}, editing ? "Enregistrer et republier" : "Créer et publier"),
-    h("button", {class: "btn", type: "button", onclick: () => { dialog.close(); dialog.remove(); }}, "Annuler")), msg);
-  dialog.append(h("div", {class: "dlg-head"}, h("h2", {}, editing ? "Modifier la fiche" : "Nouvel adhérent")), h("div", {class: "dlg-body"}, form));
+  h("div", {class: "actions"}, h("button", {class: "btn primary", type: "submit"}, editing ? "حفظ وإعادة النشر" : "إنشاء ونشر"),
+    h("button", {class: "btn", type: "button", onclick: () => { dialog.close(); dialog.remove(); }}, "إلغاء")), msg);
+  dialog.append(h("div", {class: "dlg-head"}, h("h2", {}, editing ? "تعديل بطاقة العضو" : "عضو جديد")), h("div", {class: "dlg-body"}, form));
   document.body.append(dialog);
   dialog.showModal();
 }
@@ -197,32 +197,32 @@ function drawDetail(dialog, m) {
   const keepScroll = dialog.querySelector(".dlg-body")?.scrollTop || 0;
 
   dialog.replaceChildren(
-    h("div", {class: "dlg-head"}, h("h2", {dir: "auto"}, m.fullName), h("button", {class: "btn", onclick: () => dialog.close()}, "Fermer")),
+    h("div", {class: "dlg-head"}, h("h2", {dir: "auto"}, m.fullName), h("button", {class: "btn", onclick: () => dialog.close()}, "إغلاق")),
     h("div", {class: "dlg-body"},
       h("div", {class: "row"}, h("img", {class: "thumb", src: `${API}/members/${m.id}/photo?${m.updatedAt}`, alt: ""}),
-        h("div", {}, h("div", {dir: "auto"}, m.role), h("div", {class: "muted"}, "N° " + (m.memberNumber || "—") + " · expire le " + m.expiresAt),
+        h("div", {}, h("div", {dir: "auto"}, m.role), h("div", {class: "muted"}, "رقم " + (m.memberNumber || "—") + " · ينتهي في " + m.expiresAt),
           h("div", {class: "steps"}, badge(m.status, L.status[m.status]), badge(m.publication.state, L.pub[m.publication.state]), badge(m.pdf.state, L.pdf[m.pdf.state])))),
-      m.publication.state === "failed" ? h("div", {class: "notice err", role: "alert"}, "La fiche est enregistrée mais la publication a échoué : " + m.publication.error) : null,
-      ["saving", "publishing"].includes(m.publication.state) ? h("div", {class: "notice warn", role: "status"}, L.pub[m.publication.state] + "… (la vérification de l'URL publique peut prendre une à deux minutes)") : null,
+      m.publication.state === "failed" ? h("div", {class: "notice err", role: "alert"}, "تم حفظ البطاقة لكن النشر فشل : " + m.publication.error) : null,
+      ["saving", "publishing"].includes(m.publication.state) ? h("div", {class: "notice warn", role: "status"}, L.pub[m.publication.state] + "… (قد يستغرق التحقق من الرابط العام دقيقة أو دقيقتين)") : null,
       m.pdf.state === "unavailable" ? h("div", {class: "notice warn"}, m.pdf.error) : null,
       m.pdf.state === "failed" ? h("div", {class: "notice err"}, "PDF : " + m.pdf.error) : null,
-      m.pdf.state === "blocked" ? h("div", {class: "notice err"}, "PDF non généré : " + m.pdf.issues.map(i => i.message).join(" ")) : null,
+      m.pdf.state === "blocked" ? h("div", {class: "notice err"}, "لم يُنشأ PDF : " + m.pdf.issues.map(i => i.message).join(" ")) : null,
       (m.pdf.issues || []).filter(i => !i.blocking).map(i => h("div", {class: "notice warn"}, i.message)),
-      h("div", {class: "card"}, h("h2", {}, "Lien public"), h("div", {class: "link"}, m.url),
+      h("div", {class: "card"}, h("h2", {}, "الرابط العام"), h("div", {class: "link"}, m.url),
         h("div", {class: "actions"},
-          published ? h("a", {class: "btn primary", href: m.url, target: "_blank", rel: "noopener"}, "Voir la carte") : h("button", {class: "btn primary", disabled: true}, "Voir la carte"),
-          act("Copier le lien", async () => { await navigator.clipboard.writeText(m.url); notify(msg, "ok", "Lien copié."); }, "btn", !published),
-          download(`${API}/members/${m.id}/qr.png`, "Télécharger le QR"),
-          download(`${API}/members/${m.id}/card.pdf`, "Télécharger le PDF")),
+          published ? h("a", {class: "btn primary", href: m.url, target: "_blank", rel: "noopener"}, "عرض البطاقة") : h("button", {class: "btn primary", disabled: true}, "عرض البطاقة"),
+          act("نسخ الرابط", async () => { await navigator.clipboard.writeText(m.url); notify(msg, "ok", "تم نسخ الرابط."); }, "btn", !published),
+          download(`${API}/members/${m.id}/qr.png`, "تنزيل رمز QR"),
+          download(`${API}/members/${m.id}/card.pdf`, "تنزيل PDF")),
         msg),
       h("div", {class: "actions"},
-        m.publication.state === "failed" ? act("Relancer la publication", () => api("POST", `/members/${m.id}/publish`), "btn primary") : null,
-        act("Modifier", async () => openForm(m)),
-        m.disabled ? act("Réactiver", () => api("POST", `/members/${m.id}/enable`)) : act("Désactiver", () => api("POST", `/members/${m.id}/disable`), "btn danger"),
+        m.publication.state === "failed" ? act("إعادة محاولة النشر", () => api("POST", `/members/${m.id}/publish`), "btn primary") : null,
+        act("تعديل", async () => openForm(m)),
+        m.disabled ? act("إعادة التفعيل", () => api("POST", `/members/${m.id}/enable`)) : act("تعطيل", () => api("POST", `/members/${m.id}/disable`), "btn danger"),
         h("form", {class: "row", onsubmit: async event => {
           event.preventDefault();
           try { await api("POST", `/members/${m.id}/renew`, {expiresAt: event.target.date.value}); await dialog.refresh(); } catch (error) { notify(msg, "err", error.message); }
-        }}, h("input", {type: "date", name: "date", required: true, "aria-label": "Nouvelle date d'expiration", style: "width:auto"}), h("button", {class: "btn", type: "submit"}, "Renouveler (même QR)"))),
+        }}, h("input", {type: "date", name: "date", required: true, "aria-label": "تاريخ الانتهاء الجديد", style: "width:auto"}), h("button", {class: "btn", type: "submit"}, "تجديد (نفس رمز QR)"))),
       printPanel(dialog, m)));
   dialog.querySelector(".dlg-body").scrollTop = keepScroll;
 }
@@ -231,18 +231,18 @@ function drawDetail(dialog, m) {
 function printForm(config, settings, onchange) {
   const fieldBoxes = {};
   const mk = (name, label, value) => h("label", {class: "field"}, label, h("input", {type: "number", name, min: 40, max: 300, step: "0.1", value, onchange}));
-  const width = mk("widthMm", "Largeur (mm)", config.widthMm);
-  const height = mk("heightMm", "Hauteur (mm)", config.heightMm);
-  const orientation = h("select", {name: "orientation", onchange}, h("option", {value: "portrait", selected: config.orientation === "portrait"}, "Portrait"),
-    h("option", {value: "landscape", selected: config.orientation === "landscape"}, "Paysage"));
+  const width = mk("widthMm", "العرض (ملم)", config.widthMm);
+  const height = mk("heightMm", "الارتفاع (ملم)", config.heightMm);
+  const orientation = h("select", {name: "orientation", onchange}, h("option", {value: "portrait", selected: config.orientation === "portrait"}, "عمودي"),
+    h("option", {value: "landscape", selected: config.orientation === "landscape"}, "أفقي"));
   const list = h("div", {class: "fieldlist"}, PRINT_FIELDS.map(([key, label, pub]) => {
     const box = h("input", {type: "checkbox", checked: !!config.fields[key], onchange});
     fieldBoxes[key] = box;
     const online = pub === "always" || (pub && settings.publicFields[pub]);
-    return h("label", {}, box, label, h("span", {class: "tag"}, online ? "Imprimé · aussi visible en ligne" : "Imprimé uniquement"));
+    return h("label", {}, box, label, h("span", {class: "tag"}, online ? "مطبوع · ظاهر أيضاً على الإنترنت" : "مطبوع فقط"));
   }));
   const root = h("div", {}, h("div", {class: "grid2"}, width.parentNode ? width : width, height,
-    h("label", {class: "field"}, "Orientation", orientation)), h("p", {class: "muted"}, "Cocher un champ l'imprime sur le PDF ; cela ne le rend pas public. Les champs visibles en ligne se règlent dans Réglages."), list);
+    h("label", {class: "field"}, "الاتجاه", orientation)), h("p", {class: "muted"}, "تحديد الحقل يطبعه على PDF دون أن يجعله عاماً. الحقول الظاهرة على الإنترنت تُضبط في الإعدادات."), list);
   root.read = () => ({widthMm: Number(width.querySelector("input").value), heightMm: Number(height.querySelector("input").value), orientation: orientation.value,
     fields: Object.fromEntries(Object.entries(fieldBoxes).map(([k, b]) => [k, b.checked]))});
   return root;
@@ -261,10 +261,10 @@ function previewPane(request) {
       const scale = Math.min(1, 300 / px(data.widthMm), 420 / px(data.heightMm)) || 1;
       box.style.width = px(data.widthMm) * scale + "px";
       box.style.height = px(data.heightMm) * scale + "px";
-      const frame = h("iframe", {src: API + "/print-preview/" + data.token, title: "Aperçu", scrolling: "no", sandbox: "allow-scripts allow-same-origin",
+      const frame = h("iframe", {src: API + "/print-preview/" + data.token, title: "معاينة", scrolling: "no", sandbox: "allow-scripts allow-same-origin",
         style: `width:${px(data.widthMm)}px;height:${px(data.heightMm)}px;transform:scale(${scale})`});
       box.replaceChildren(frame);
-      const info = [h("div", {class: "muted"}, `Format ${data.widthMm} × ${data.heightMm} mm · QR ${data.layout.qrMm ? data.layout.qrMm.toFixed(1) + " mm" : "absent"}`)];
+      const info = [h("div", {class: "muted"}, `المقاس ${data.widthMm} × ${data.heightMm} ملم · QR ${data.layout.qrMm ? data.layout.qrMm.toFixed(1) + " ملم" : "غير موجود"}`)];
       for (const issue of data.layout.issues) info.push(h("div", {class: "notice " + (issue.blocking ? "err" : "warn")}, issue.message));
       notes.replaceChildren(...info);
     } catch (error) { notify(notes, "err", error.message); }
@@ -284,15 +284,15 @@ function printPanel(dialog, m) {
     event.target.disabled = true;
     try { await fn(); await dialog.refresh(); } catch (error) { notify(msg, "err", error.message); event.target.disabled = false; }
   }}, label);
-  return h("div", {class: "card"}, h("h2", {}, "Impression (PDF)"),
+  return h("div", {class: "card"}, h("h2", {}, "الطباعة (PDF)"),
     h("div", {class: "grid2"}, form, pane.node),
     h("div", {class: "actions"},
-      run("Enregistrer pour cette carte et régénérer le PDF", () => api("PUT", `/members/${m.id}/print`, {config: form.read()}), "btn primary"),
-      run("Utiliser les réglages par défaut", () => api("PUT", `/members/${m.id}/print`, {config: null})),
-      run("Régénérer le PDF", () => api("POST", `/members/${m.id}/pdf`)),
-      h("button", {class: "btn", onclick: () => { const f = pane.node.querySelector("iframe"); if (f) { f.contentWindow.focus(); f.contentWindow.print(); } }}, "Imprimer / PDF (navigateur)")), msg,
-    h("p", {class: "muted"}, "Impression par le navigateur : choisir « Enregistrer au format PDF », marges aucune, échelle 100 %."),
-    h("p", {class: "muted"}, m.print ? "Cette carte a sa propre configuration." : "Cette carte suit la configuration par défaut."));
+      run("حفظ لهذه البطاقة وإعادة إنشاء PDF", () => api("PUT", `/members/${m.id}/print`, {config: form.read()}), "btn primary"),
+      run("استخدام الإعدادات الافتراضية", () => api("PUT", `/members/${m.id}/print`, {config: null})),
+      run("إعادة إنشاء PDF", () => api("POST", `/members/${m.id}/pdf`)),
+      h("button", {class: "btn", onclick: () => { const f = pane.node.querySelector("iframe"); if (f) { f.contentWindow.focus(); f.contentWindow.print(); } }}, "طباعة / PDF (المتصفح)")), msg,
+    h("p", {class: "muted"}, "الطباعة عبر المتصفح : اختر «حفظ بصيغة PDF» والهوامش «بلا» والمقياس 100%."),
+    h("p", {class: "muted"}, m.print ? "لهذه البطاقة إعداد خاص بها." : "تتبع هذه البطاقة الإعداد الافتراضي."));
 }
 
 /* ---------- settings ---------- */
@@ -305,34 +305,39 @@ async function loadSettings() {
 function renderSettings() {
   const main = document.getElementById("main");
   const s = state.settings;
-  if (!s) return main.replaceChildren(h("p", {}, "Chargement…"));
+  if (!s) return main.replaceChildren(h("p", {}, "جارٍ التحميل…"));
   const msg = h("div");
-  const contactLabels = {phone: "Téléphone (+213…)", whatsapp: "WhatsApp", facebook: "Facebook (URL https)", instagram: "Instagram (URL https)", email: "E-mail",
-    maps: "Lien Google Maps (https)", address: "Adresse", hours: "Horaires", nationalWebsite: "Site national (https)"};
+  const contactLabels = {phone: "الهاتف (+213…)", whatsapp: "واتساب", facebook: "فيسبوك (رابط الصفحة https)", facebookName: "اسم صفحة فيسبوك المعروض",
+    instagram: "إنستغرام (رابط https)", email: "البريد الإلكتروني", maps: "رابط خرائط Google (https)", address: "عنوان المقر", hours: "أوقات الاستقبال (سطر لكل يوم)",
+    nationalWebsite: "الموقع الوطني (https)", nationalPhones: "هواتف المكتب الوطني (رقم في كل سطر)", nationalEmail: "البريد الإلكتروني للمكتب الوطني"};
+  const ltrKeys = ["phone", "whatsapp", "email", "facebook", "instagram", "maps", "nationalWebsite", "nationalEmail", "nationalPhones"];
+  const multiline = ["hours", "nationalPhones"];
   const contacts = h("div", {class: "grid2"}, Object.keys(s.contacts).map(key => h("label", {class: "field"}, contactLabels[key] || key,
-    h("input", {type: "text", name: key, dir: ["phone", "whatsapp", "email", "facebook", "instagram", "maps", "nationalWebsite"].includes(key) ? "ltr" : "auto", value: s.contacts[key]}))));
-  const pf = {photo: "Photo", role: "Poste", expiry: "Date d'expiration", memberNumber: "Numéro d'adhérent"};
+    multiline.includes(key)
+      ? h("textarea", {name: key, rows: 3, dir: ltrKeys.includes(key) ? "ltr" : "auto", value: s.contacts[key]})
+      : h("input", {type: "text", name: key, dir: ltrKeys.includes(key) ? "ltr" : "auto", value: s.contacts[key]}))));
+  const pf = {photo: "الصورة", role: "المنصب", expiry: "تاريخ الانتهاء", memberNumber: "رقم العضوية"};
   const publicBoxes = {};
-  const publicList = h("div", {class: "fieldlist"}, h("label", {}, h("input", {type: "checkbox", checked: true, disabled: true}), "Nom complet", h("span", {class: "tag"}, "toujours visible")),
-    Object.entries(pf).map(([k, label]) => { publicBoxes[k] = h("input", {type: "checkbox", checked: !!s.publicFields[k]}); return h("label", {}, publicBoxes[k], label, h("span", {class: "tag"}, "visible en ligne")); }));
+  const publicList = h("div", {class: "fieldlist"}, h("label", {}, h("input", {type: "checkbox", checked: true, disabled: true}), "الاسم الكامل", h("span", {class: "tag"}, "ظاهر دائماً")),
+    Object.entries(pf).map(([k, label]) => { publicBoxes[k] = h("input", {type: "checkbox", checked: !!s.publicFields[k]}); return h("label", {}, publicBoxes[k], label, h("span", {class: "tag"}, "ظاهر على الإنترنت")); }));
   const printUI = printForm(s.printDefaults, s, () => {});
   const job = state.settingsPublication;
   main.replaceChildren(h("form", {onsubmit: async event => {
     event.preventDefault();
     try {
-      const body = {contacts: Object.fromEntries([...contacts.querySelectorAll("input")].map(i => [i.name, i.value])),
+      const body = {contacts: Object.fromEntries([...contacts.querySelectorAll("input, textarea")].map(i => [i.name, i.value])),
         publicFields: Object.fromEntries(Object.entries(publicBoxes).map(([k, b]) => [k, b.checked])), printDefaults: printUI.read()};
       const out = await api("PUT", "/settings", body);
       state.settings = out.settings; state.settingsPublication = out.publication;
-      notify(msg, "ok", "Réglages enregistrés. Les pages publiques sont republiées si nécessaire.");
+      notify(msg, "ok", "تم حفظ الإعدادات. تُعاد صفحات البطاقات العامة عند الحاجة.");
       pollSettings();
     } catch (error) { notify(msg, "err", error.message); }
   }},
-  job ? h("div", {class: "notice " + (job.state === "failed" ? "err" : job.state === "published" ? "ok" : "warn")}, "Publication des réglages : " + L.pub[job.state] + (job.error ? " — " + job.error : "")) : null,
-  h("div", {class: "card"}, h("h2", {}, "Coordonnées officielles du bureau"), h("p", {class: "muted"}, "Centralisées : elles s'affichent sur toutes les cartes. Les champs vides sont masqués."), contacts),
-  h("div", {class: "card"}, h("h2", {}, "Champs publics des cartes"), h("p", {class: "muted"}, "Seuls ces champs sont publiés sur la page de la carte."), publicList),
-  h("div", {class: "card"}, h("h2", {}, "Impression par défaut (nouvelles cartes)"), printUI),
-  h("button", {class: "btn primary", type: "submit"}, "Enregistrer les réglages"), msg));
+  job ? h("div", {class: "notice " + (job.state === "failed" ? "err" : job.state === "published" ? "ok" : "warn")}, "نشر الإعدادات : " + L.pub[job.state] + (job.error ? " — " + job.error : "")) : null,
+  h("div", {class: "card"}, h("h2", {}, "بيانات التواصل الرسمية للمكتب"), h("p", {class: "muted"}, "موحّدة : تظهر على كل البطاقات. الحقول الفارغة تُخفى."), contacts),
+  h("div", {class: "card"}, h("h2", {}, "الحقول العامة للبطاقات"), h("p", {class: "muted"}, "هذه الحقول فقط تُنشر في صفحة البطاقة."), publicList),
+  h("div", {class: "card"}, h("h2", {}, "الطباعة الافتراضية (للبطاقات الجديدة)"), printUI),
+  h("button", {class: "btn primary", type: "submit"}, "حفظ الإعدادات"), msg));
 }
 function pollSettings() {
   setTimeout(async () => {

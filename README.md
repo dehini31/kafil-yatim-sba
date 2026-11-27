@@ -32,6 +32,10 @@ Navigateur ──HTTPS──▶ dehini.com (nginx/Caddy) ──/kafil/──▶ 
 
 Imprimer un champ sur le PDF ne le rend pas public (réglages distincts). Attention : le dépôt est public, l'historique Git conserve les anciennes versions d'une photo publiée.
 
+## Langue et coordonnées par défaut
+
+L'interface d'administration et les messages du serveur sont en arabe (RTL) ; la ligne de commande (`cli.js`, assistant d'installation) et ce README restent en français. **Réglages → بيانات التواصل الرسمية** fixe les coordonnées affichées sur toutes les cartes : adresse du bureau, page Facebook (nom affiché + lien), téléphone, WhatsApp, e-mail, horaires (les champs vides sont masqués) et le bloc « المكتب الوطني للجمعية » (téléphones et e-mail nationaux, clairement présentés comme ne pas être les numéros du bureau de Sidi Bel Abbès). Valeurs initiales : adresse, nom de la page Facebook et contacts nationaux ; après mise à jour de l'application, les bases existantes reçoivent une fois ces valeurs dans leurs champs encore vides, puis les modifications de l'administrateur sont conservées.
+
 ## Fonctionnement
 
 « Créer et publier » : validation → enregistrement → URL `/members/<slug>/` (slug aléatoire de 8 caractères, stable, non devinable) → commit → **vérification** que l'URL affiche la carte (contenu et révision) → QR à partir du lien vérifié → PDF initial. États : Enregistrement, Publication en cours, Publiée, Échec. En cas d'échec la fiche reste ; « Relancer la publication » est idempotent (même slug, pas de doublon ; un commit sans changement est ignoré). Le délai de GitHub Pages est d'environ 1 à 2 minutes.
