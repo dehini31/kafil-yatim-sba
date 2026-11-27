@@ -58,6 +58,16 @@ Mise à jour : `git pull && docker compose up -d --build` (les pages statiques e
 
 Développement local : `npm install`, `npm run admin:add -- --email vous@exemple.org`, `npm start` puis <http://127.0.0.1:8787/admin/> (sans `BASE_PATH`).
 
+## Démarrage rapide (ordinateur du bureau, Windows / Mac / Linux)
+
+1. Installer **Node.js 22 (LTS)** depuis <https://nodejs.org> et avoir **Google Chrome ou Microsoft Edge** (utilisé pour fabriquer les PDF).
+2. Extraire `kafil-admin.zip`, puis **double-cliquer sur `start-admin.bat`** (Mac/Linux : `./start-admin.sh`).
+3. Au premier lancement, l'assistant demande le compte FTP de dehini.com (voir plus bas) puis crée votre compte administrateur. Il teste la connexion FTP.
+4. Le navigateur s'ouvre sur <http://127.0.0.1:8787/admin/> : se connecter, **Réglages** (contacts du bureau), puis **+ Nouvel adhérent → Créer et publier**. La fenêtre noire doit rester ouverte pendant l'utilisation.
+5. Dans la fiche : **Télécharger le PDF** (impression), **Télécharger le QR**, **Voir la carte**, **Copier le lien**. Dimensions et champs d'impression se règlent dans la fiche (par carte) ou dans Réglages (par défaut).
+
+Pour changer la configuration plus tard : supprimer le fichier `.env` et relancer, ou `npm run setup`.
+
 ## Sans VPS : admin sur votre ordinateur, site sur dehini.com/kafil (FTP)
 
 Le site public (cartes, QR, pages) est statique : il n'a besoin que de l'hébergement actuel de dehini.com. Seule l'administration (connexion, PDF) demande Node et Chromium ; elle tourne sur un ordinateur du bureau et **envoie automatiquement chaque carte publiée par FTP** vers `dehini.com/kafil`.

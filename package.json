@@ -10,7 +10,8 @@
     "start": "node server/index.js",
     "test": "node --test --test-timeout=120000 test/*.test.js",
     "admin:add": "node server/cli.js add-admin",
-    "build:site": "node scripts/build-site.js"
+    "build:site": "node scripts/build-site.js",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
     "basic-ftp": "^5.3.1",

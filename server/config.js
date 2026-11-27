@@ -1,7 +1,19 @@
 "use strict";
+const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
+
+// Minimal .env reader (no dependency); real environment variables win.
+function loadDotEnv() {
+  const file = path.join(root, ".env");
+  if (!fs.existsSync(file)) return;
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+    if (m && !line.trim().startsWith("#") && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+loadDotEnv();
 
 function load(env = process.env) {
   const baseUrl = env.PUBLIC_BASE_URL || require("../data/site.json").baseUrl;
