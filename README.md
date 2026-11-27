@@ -40,10 +40,10 @@ Edit only `data/contacts.json`. Once GitHub Pages deploys the edit, all cards lo
 | `email` | Official office email |
 | `maps` | Verified Google Maps HTTPS link |
 | `address` | Office street address, shown as a Maps link |
-| `hours` | Opening days and hours, shown as text |
+| `hours` | Opening days and hours, shown in an expandable card |
 | `nationalWebsite` | National association HTTPS website |
 
-Empty and malformed contact methods are omitted. Office hours are informational. The national site is the only contact filled at launch.
+Empty and malformed contact methods are omitted. The office hours card expands to show the schedule. The national site is the only contact filled at launch.
 
 ## Deployment and files
 

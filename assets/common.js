@@ -100,14 +100,24 @@ function renderContacts(config) {
   const items = contactItems(config);
   for (const section of document.querySelectorAll("[data-contacts]")) {
     for (const [key, title, value, url, ltr] of items) {
-      const item = element(url ? "a" : "div", "", "contact");
-      if (url) item.href = url;
+      if (key === "hours") {
+        const disclosure = element("details", "", "contact");
+        const summary = element("summary");
+        summary.append(icon(key), element("span", title));
+        const detail = element("small", value);
+        detail.dir = "auto";
+        disclosure.append(summary, detail);
+        section.querySelector(".contact-grid").append(disclosure);
+        continue;
+      }
+      const item = element("a", "", "contact");
+      item.href = url;
       const label = element("span");
       const detail = element("small", value);
       detail.dir = ltr ? "ltr" : "auto";
       label.append(element("span", title), detail);
       item.append(icon(key), label);
-      if (url) item.append(icon("arrow", "arrow"));
+      item.append(icon("arrow", "arrow"));
       section.querySelector(".contact-grid").append(item);
     }
     section.hidden = !items.length;
