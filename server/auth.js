@@ -82,6 +82,6 @@ function logout(store, req) {
   if (token) { const h = sha(token, 64); store.db.sessions = store.db.sessions.filter(s => s.hash !== h); store.save(); }
 }
 function cookie(config, token, maxAge) {
-  return `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=${config.basePath || "/"}; Max-Age=${maxAge}${config.secureCookies ? "; Secure" : ""}`;
+  return `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=${config.basePath}/admin; Max-Age=${maxAge}${config.secureCookies ? "; Secure" : ""}`;
 }
 module.exports = {addAdmin, login, logout, sessionAdmin, cookie};

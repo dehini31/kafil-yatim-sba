@@ -288,8 +288,10 @@ test("everything works under the /kafil sub-path of the domain", async () => {
   const c = client(app.origin);
   const login = await c.call("POST", "/kafil/api/login", {email: "admin@example.test", password: require("./helpers").PASSWORD});
   assert.equal(login.status, 200);
-  assert.match(login.headers.get("set-cookie"), /Path=\/kafil;/);
+  assert.match(login.headers.get("set-cookie"), /Path=\/kafil\/admin;/);
   assert.equal((await c.call("GET", "/kafil/api/members")).status, 200);
+  assert.equal((await c.call("GET", "/kafil/admin/api/members")).status, 200, "UI mount point for the API");
+  assert.equal((await fetch(app.origin + "/kafil/admin/api/members")).status, 401);
   assert.equal((await c.call("GET", "/kafil/admin/")).status, 200);
   assert.equal((await c.call("GET", "/kafil/admin/admin.js")).status, 200);
   assert.equal((await c.call("GET", "/kafil/assets/logo.jpg", undefined, {raw: true})).status, 200);
@@ -298,4 +300,20 @@ test("everything works under the /kafil sub-path of the domain", async () => {
   assert.equal((await fetch(app.origin + "/kafil/api/members")).status, 401);
   const home = await (await fetch(app.origin + "/kafil/")).text();
   assert.ok(home.includes("بطاقات الأعضاء"));
+});
+
+test("host without a browser: card still publishes, PDF falls back to browser printing", async () => {
+  const noBrowser = () => { throw Object.assign(new Error("none"), {code: "NO_BROWSER"}); };
+  const lite = await startApp({pdf: {render: noBrowser, analyze: noBrowser, close: async () => {}}});
+  const c = client(lite.origin);
+  await c.login();
+  const r = await c.call("POST", "/api/members", {fullName: "عضو (TEST)", role: "عضو", expiresAt: "2099-01-01", photo});
+  const m = await waitFor(async () => { const x = (await c.call("GET", "/api/members/" + r.json.member.id)).json.member; return x.pdf.state !== "building" ? x : null; });
+  assert.equal(m.publication.state, "published");
+  assert.equal(m.pdf.state, "unavailable");
+  assert.equal((await c.call("GET", `/api/members/${m.id}/qr.png`, undefined, {raw: true})).status, 200);
+  const pv = await c.call("POST", "/api/print-preview", {memberId: m.id});
+  assert.equal(pv.status, 200);
+  assert.equal((await c.call("GET", "/api/print-preview/" + pv.json.token)).status, 200);
+  await lite.close();
 });

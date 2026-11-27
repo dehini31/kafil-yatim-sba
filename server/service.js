@@ -235,7 +235,9 @@ class Service {
       }
       if (actor) this.store.audit(actor, "member.pdf", {member: m.id});
     } catch (error) {
-      m.pdf = {state: "failed", error: error.message};
+      m.pdf = error.code === "NO_BROWSER"
+        ? {state: "unavailable", error: "Génération serveur indisponible : utilisez « Imprimer / PDF (navigateur) » dans la fiche."}
+        : {state: "failed", error: error.message};
     }
     this.store.save();
     return this.view(m);
@@ -262,7 +264,12 @@ class Service {
     const cfg = print.normalizeConfig(config ?? (memberId ? member.print : null), this.db.settings.printDefaults);
     const image = draft.photo ? await photo.normalize(draft.photo) : memberId ? this.photoBuffer(this.find(memberId)) : null;
     const html = print.buildHtml({member, config: cfg, publicUrl: url, photoBuffer: image});
-    const layout = await this.pdf.analyze(html, cfg);
+    let layout;
+    try { layout = await this.pdf.analyze(html, cfg); }
+    catch (error) {
+      if (error.code !== "NO_BROWSER") throw error;
+      layout = {ready: true, fits: true, qrMm: null, issues: [{blocking: false, message: "Vérification automatique de la mise en page indisponible sur ce serveur : contrôlez l'aperçu."}]};
+    }
     const token = newId();
     this.previews.set(token, {html, at: Date.now()});
     for (const [key, value] of this.previews) if (Date.now() - value.at > 10 * 60e3 || this.previews.size > 50) this.previews.delete(key);

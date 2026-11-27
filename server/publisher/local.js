@@ -13,8 +13,9 @@ class LocalPublisher {
   }
   // Code and static pages follow the repository on every start; published data (cards, photos, registry, contacts) is preserved.
   syncStatic() {
+    if (path.resolve(this.dir) === path.resolve(root)) return;
     const copy = (from, to) => { fs.mkdirSync(path.dirname(to), {recursive: true}); fs.copyFileSync(from, to); };
-    for (const file of [".nojekyll", "index.html", "members/preview/index.html"]) copy(path.join(root, file), path.join(this.dir, file));
+    for (const file of [".nojekyll", ".htaccess", "index.html", "members/preview/index.html"]) copy(path.join(root, file), path.join(this.dir, file));
     for (const file of fs.readdirSync(path.join(root, "assets"))) copy(path.join(root, "assets", file), path.join(this.dir, "assets", file));
     for (const file of ["data/members.json", "data/contacts.json"]) {
       if (!fs.existsSync(path.join(this.dir, file))) copy(path.join(root, file), path.join(this.dir, file));

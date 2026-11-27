@@ -25,7 +25,7 @@ function createApp(options = {}) {
     publisher = config.publisher === "github" ? new GithubPublisher(config)
       : config.publisher === "ftp" ? new FtpPublisher(config) : new LocalPublisher(config);
   }
-  const service = new Service({config, store, publisher, pdf, fetchImpl: options.fetchImpl});
+  const service = new Service({config, store, publisher, pdf: options.pdf || pdf, fetchImpl: options.fetchImpl});
 
   const send = (res, status, body, headers = {}) => {
     res.writeHead(status, {"x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "cache-control": "no-store", ...headers});
@@ -139,6 +139,8 @@ function createApp(options = {}) {
       const prefix = config.basePath;
       if (prefix && (url.pathname === prefix)) return send(res, 301, "", {location: prefix + "/"});
       if (prefix && url.pathname.startsWith(prefix + "/")) url.pathname = url.pathname.slice(prefix.length);
+      // The browser UI calls /admin/api/* (one mount point, convenient behind cPanel Passenger); /api/* stays valid.
+      if (url.pathname.startsWith("/admin/api/")) url.pathname = url.pathname.slice(6);
       if (url.pathname.startsWith("/api/")) return await api(req, res, url);
       if (url.pathname === "/admin") return send(res, 301, "", {location: prefix + "/admin/"});
       if (url.pathname.startsWith("/admin/")) return serveFile(res, path.join(root, "admin"), url.pathname.slice(7), {"content-security-policy": ADMIN_CSP});

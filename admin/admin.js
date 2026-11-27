@@ -2,12 +2,12 @@
 
 const app = document.getElementById("app");
 const ROOT = new URL("../", location.href).pathname; // works under any sub-path, e.g. /kafil/
-const API = ROOT + "api";
+const API = new URL("api", location.href).pathname.replace(/\/$/, ""); // /kafil/admin/api
 const ASSETS = ROOT + "assets/";
 const L = {
   status: {active: "Actif", expired: "Expiré", disabled: "Désactivé"},
   pub: {saving: "Enregistrement", publishing: "Publication en cours", published: "Publiée", failed: "Échec"},
-  pdf: {none: "PDF : —", building: "PDF en cours", ready: "PDF prêt", blocked: "PDF bloqué", failed: "PDF : échec"}
+  pdf: {none: "PDF : —", unavailable: "PDF navigateur", building: "PDF en cours", ready: "PDF prêt", blocked: "PDF bloqué", failed: "PDF : échec"}
 };
 const PRINT_FIELDS = [
   ["logo", "Logo", null], ["association", "Nom de l'association", null], ["office", "Bureau wilaya", null],
@@ -204,6 +204,7 @@ function drawDetail(dialog, m) {
           h("div", {class: "steps"}, badge(m.status, L.status[m.status]), badge(m.publication.state, L.pub[m.publication.state]), badge(m.pdf.state, L.pdf[m.pdf.state])))),
       m.publication.state === "failed" ? h("div", {class: "notice err", role: "alert"}, "La fiche est enregistrée mais la publication a échoué : " + m.publication.error) : null,
       ["saving", "publishing"].includes(m.publication.state) ? h("div", {class: "notice warn", role: "status"}, L.pub[m.publication.state] + "… (la vérification de l'URL publique peut prendre une à deux minutes)") : null,
+      m.pdf.state === "unavailable" ? h("div", {class: "notice warn"}, m.pdf.error) : null,
       m.pdf.state === "failed" ? h("div", {class: "notice err"}, "PDF : " + m.pdf.error) : null,
       m.pdf.state === "blocked" ? h("div", {class: "notice err"}, "PDF non généré : " + m.pdf.issues.map(i => i.message).join(" ")) : null,
       (m.pdf.issues || []).filter(i => !i.blocking).map(i => h("div", {class: "notice warn"}, i.message)),
@@ -276,7 +277,8 @@ function printPanel(dialog, m) {
   const msg = h("div");
   const trigger = debounce(() => pane.update(), 300);
   const form = printForm(m.print || effective, settings, trigger);
-  const pane = previewPane(() => api("POST", "/print-preview", {memberId: m.id, config: form.read()}));
+  let pane;
+  pane = previewPane(() => api("POST", "/print-preview", {memberId: m.id, config: form.read()}));
   pane.update();
   const run = (label, fn, cls = "btn") => h("button", {class: cls, onclick: async event => {
     event.target.disabled = true;
@@ -287,7 +289,9 @@ function printPanel(dialog, m) {
     h("div", {class: "actions"},
       run("Enregistrer pour cette carte et régénérer le PDF", () => api("PUT", `/members/${m.id}/print`, {config: form.read()}), "btn primary"),
       run("Utiliser les réglages par défaut", () => api("PUT", `/members/${m.id}/print`, {config: null})),
-      run("Régénérer le PDF", () => api("POST", `/members/${m.id}/pdf`))), msg,
+      run("Régénérer le PDF", () => api("POST", `/members/${m.id}/pdf`)),
+      h("button", {class: "btn", onclick: () => { const f = pane.node.querySelector("iframe"); if (f) { f.contentWindow.focus(); f.contentWindow.print(); } }}, "Imprimer / PDF (navigateur)")), msg,
+    h("p", {class: "muted"}, "Impression par le navigateur : choisir « Enregistrer au format PDF », marges aucune, échelle 100 %."),
     h("p", {class: "muted"}, m.print ? "Cette carte a sa propre configuration." : "Cette carte suit la configuration par défaut."));
 }
 

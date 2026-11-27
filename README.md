@@ -58,6 +58,32 @@ Mise à jour : `git pull && docker compose up -d --build` (les pages statiques e
 
 Développement local : `npm install`, `npm run admin:add -- --email vous@exemple.org`, `npm start` puis <http://127.0.0.1:8787/admin/> (sans `BASE_PATH`).
 
+## Admin en ligne sur dehini.com/kafil/admin (cPanel « Setup Node.js App »)
+
+Le serveur d'administration tourne comme application Node de cPanel (Passenger) ; il écrit directement les cartes dans le dossier public `~/public_html/kafil` (aucun GitHub ni cron nécessaire pour publier).
+
+1. **Libérer le dossier public** (l'application le gère elle-même) : `rm -rf ~/public_html/kafil` puis `mkdir -p ~/public_html/kafil` ; supprimer la tâche cron `deploy-host.sh`.
+2. **Cloner l'application hors du dossier public** : `cd ~ && git clone https://github.com/dehini31/kafil-yatim-sba.git kafil-admin`
+3. **Créer `~/kafil-admin/.env`** (adapter `/home/dehini91`) :
+
+```
+PUBLISHER=local
+BASE_PATH=/kafil
+PUBLIC_BASE_URL=https://dehini.com/kafil/
+ADMIN_URL=https://dehini.com/kafil/admin/
+TRUST_PROXY=true
+SITE_DIR=/home/dehini91/public_html/kafil
+DATA_DIR=/home/dehini91/kafil-data
+```
+
+4. **cPanel → Setup Node.js App → Create Application** : Node 22 ou plus, mode *Production*, *Application root* `kafil-admin`, *Application URL* `dehini.com` + `kafil/admin`, *Startup file* `server/index.js`. Cliquer **Run NPM Install**, puis **Restart**.
+5. **Créer l'administrateur** dans le terminal (après la commande `source …/activate` affichée par cPanel en haut de la page de l'application) : `cd ~/kafil-admin && node server/cli.js add-admin --email vous@exemple.org --name "Nom"`
+6. Ouvrir <https://dehini.com/kafil/admin/>. Au démarrage, l'application recopie le site statique (accueil, ressources, carte d'exemple) dans `~/public_html/kafil` et conserve les cartes publiées.
+
+PDF : l'hébergeur n'a pas de navigateur. Essayer `cd ~/kafil-admin && npm install @sparticuz/chromium` puis redémarrer ; si cela fonctionne, « Créer et publier » génère le PDF comme ailleurs. Sinon la fiche indique « PDF navigateur » et le bouton **Imprimer / PDF (navigateur)** imprime le même document (aperçu identique, QR vérifié) : choisir « Enregistrer au format PDF », sans marges, échelle 100 %.
+
+Mise à jour : `cd ~/kafil-admin && git pull && npm install`, puis **Restart** dans cPanel. Sauvegarder `~/kafil-data`.
+
 ## Démarrage rapide (ordinateur du bureau, Windows / Mac / Linux)
 
 1. Installer **Node.js 22 (LTS)** depuis <https://nodejs.org> et avoir **Google Chrome ou Microsoft Edge** (utilisé pour fabriquer les PDF).
@@ -122,7 +148,7 @@ Mots de passe hachés (scrypt), cookie de session `HttpOnly` + `SameSite=Strict`
 npm test
 ```
 
-19 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
+20 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
 
 ## Fichiers
 
