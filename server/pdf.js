@@ -4,7 +4,9 @@ const {pageSize} = require("./print");
 let browserPromise;
 function browser() {
   if (!browserPromise) {
-    const {chromium} = require("playwright");
+    let chromium;
+    try { ({chromium} = require("playwright")); }
+    catch { browserPromise = Promise.reject(Object.assign(new Error("Moteur PDF (playwright) non installé sur ce serveur."), {code: "NO_BROWSER"})); browserPromise.catch(() => {}); const failed = browserPromise; browserPromise = null; return failed; }
     const options = {args: ["--no-sandbox", "--font-render-hinting=none"]};
     if (process.env.CHROMIUM_PATH) options.executablePath = process.env.CHROMIUM_PATH;
     // Bundled Chromium if present, otherwise the Chrome or Edge already installed on the computer.

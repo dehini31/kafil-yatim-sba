@@ -22,5 +22,8 @@
     "ftp-srv": "^4.6.3",
     "jsqr": "^1.4.0",
     "pngjs": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "playwright": "1.63.0"
   }
 }
