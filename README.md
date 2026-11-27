@@ -2,21 +2,24 @@
 
 Bureau wilaya de Sidi Bel Abbès — الجمعية الخيرية كافل اليتيم الوطنية.
 
-- Site public : <https://dehini31.github.io/kafil-yatim-sba/> (GitHub Pages, inchangé)
-- Carte d'exemple : <https://dehini31.github.io/kafil-yatim-sba/members/preview/>
+- Site public : <https://dehini.com/kafil/>
+- Administration : <https://dehini.com/kafil/admin/>
+- Carte d'exemple : <https://dehini.com/kafil/members/preview/>
 
 ## Architecture
 
 ```
-Admin (navigateur) ──HTTPS──▶ Serveur d'administration (Node)  ──commit API──▶ GitHub (main) ──▶ GitHub Pages
-  /admin/                      • authentification + sessions                      /members/<slug>/
-                               • données privées (.data / DATA_DIR)
-                               • photo, QR, PDF (Chromium)
+Navigateur ──HTTPS──▶ dehini.com (nginx/Caddy) ──/kafil/──▶ Serveur Node (Docker)
+                                                              • /kafil/            site public (cartes statiques)
+                                                              • /kafil/admin/      administration
+                                                              • /kafil/api/        API protégée
+                                                              • DATA_DIR           données privées + site publié
 ```
 
-- **Site public** : pages statiques. Chaque carte vit à `/members/<slug>/` ; `data/members.json` ne contient que `slug`, `active`, `expiresAt` (pour afficher Actif / Expiré / Désactivé sans republier) et `data/contacts.json` les coordonnées du bureau.
-- **Serveur d'administration** (`server/`, dossier `admin/` pour l'interface) : seul composant qui détient des secrets. Il stocke les données administratives dans `DATA_DIR` (`db.json`, `photos/`, `pdf/`, hors dépôt), publie en un seul commit atomique par l'API Git de GitHub, vérifie que l'URL publique sert bien la carte, puis génère QR et PDF.
-- Le jeton GitHub n'existe que dans les variables d'environnement du serveur. Rien de secret dans le dépôt ni dans le code frontend. Le public ne peut ni créer ni modifier une carte : toute route `/api` (hors connexion) exige une session valide, vérifiée côté serveur à chaque appel.
+- **Un seul serveur** sert le site public et l'administration sous `https://dehini.com/kafil/`. GitHub Pages n'est plus nécessaire (le publieur GitHub reste disponible : `PUBLISHER=github`).
+- **Cartes publiques** : fichiers statiques `/kafil/members/<slug>/`, écrits dans `SITE_DIR` ; `data/members.json` ne contient que `slug`, `active`, `expiresAt` (statut Actif / Expiré / Désactivé sans republier) et `data/contacts.json` les coordonnées du bureau.
+- **Données privées** (`DATA_DIR/db.json`, `photos/`, `pdf/`) : jamais servies. Le public ne peut ni créer ni modifier une carte : toute route `/api` (hors connexion) exige une session valide, vérifiée côté serveur à chaque appel. Aucun secret dans le dépôt ni dans le frontend.
+- Publication : écriture atomique des fichiers, puis **vérification par requête HTTP sur l'URL publique** avant de fournir le QR et le PDF.
 
 ### Ce qui est public, ce qui est privé
 
@@ -39,41 +42,25 @@ Imprimer un champ sur le PDF ne le rend pas public (réglages distincts). Attent
 
 ## Configuration
 
-Variables d'environnement (voir `.env.example`) :
+Variables d'environnement (voir `.env.example`) : `PUBLISHER` (`local` = hébergement sur dehini.com ; `github` = publication vers GitHub Pages), `BASE_PATH=/kafil`, `PUBLIC_BASE_URL=https://dehini.com/kafil/`, `ADMIN_URL` (https ⇒ cookies `Secure`), `TRUST_PROXY=true` derrière votre proxy, `DATA_DIR`, `SITE_DIR`, `SESSION_HOURS`. Avec `PUBLISHER=github` : `GITHUB_TOKEN` (fine-grained, ce dépôt, Contents : Read and write), `GITHUB_REPO`, `GITHUB_BRANCH`.
 
-| Variable | Rôle |
-| --- | --- |
-| `PUBLISHER` | `github` (production) ou `local` (développement : écrit le site dans `SITE_DIR` et le sert sous `/site/`) |
-| `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_BRANCH` | Publication. Jeton « fine-grained » limité à ce dépôt, permission **Contents : Read and write** |
-| `PUBLIC_BASE_URL` | URL publique du site, terminée par `/` |
-| `DATA_DIR` | Disque persistant (à sauvegarder) |
-| `ADMIN_URL` | URL du serveur ; en `https://` les cookies sont `Secure` |
-| `PORT`, `HOST`, `SESSION_HOURS` | Réseau et durée de session (12 h) |
+## Déploiement sur dehini.com/kafil
 
-Le serveur d'administration doit tourner derrière HTTPS (proxy du fournisseur d'hébergement ou Caddy/nginx).
+Prérequis : un serveur où dehini.com est servi par nginx ou Caddy en HTTPS, avec Docker (ou Node ≥ 22 + Chromium) — un hébergement mutualisé (cPanel) ne convient pas.
 
-## Déploiement
+1. Cloner le dépôt sur le serveur, copier `.env.example` en `.env`.
+2. `docker compose up -d --build` (le volume `kafil-data` contient tout ; sauvegardez-le).
+3. Ajouter `deploy-nginx.conf` au bloc `server` de dehini.com puis recharger nginx (Caddy : `handle /kafil/* { reverse_proxy 127.0.0.1:8787 }`).
+4. Créer le premier administrateur : `docker compose exec kafil node server/cli.js add-admin --email vous@exemple.org --name "Nom"`.
+5. Ouvrir <https://dehini.com/kafil/admin/>, renseigner **Réglages**, créer une fiche d'essai et scanner son QR.
 
-1. Héberger le serveur (Docker, voir `Dockerfile`) avec un volume persistant monté sur `/data` et les variables ci-dessus.
-2. GitHub Pages reste en **Deploy from a branch → main → /(root)**.
-3. Créer le premier administrateur (ci-dessous), ouvrir `/admin/`, renseigner **Réglages**.
+Mise à jour : `git pull && docker compose up -d --build` (les pages statiques et les ressources sont resynchronisées au démarrage ; les cartes publiées sont conservées).
 
-```bash
-docker build -t kafil-admin .
-docker run -d --name kafil-admin -p 8787:8787 -v kafil-data:/data --env-file .env kafil-admin
-```
-
-Développement local :
-
-```bash
-npm install
-npm run admin:add -- --email vous@exemple.org --name "Votre nom"
-PUBLISHER=local npm start        # http://127.0.0.1:8787/admin/
-```
+Développement local : `npm install`, `npm run admin:add -- --email vous@exemple.org`, `npm start` puis <http://127.0.0.1:8787/admin/> (sans `BASE_PATH`).
 
 ## Ajouter ou retirer un administrateur
 
-Pas d'inscription publique : les comptes se créent en ligne de commande sur le serveur (dans le conteneur : `docker exec -it kafil-admin node server/cli.js …`).
+Pas d'inscription publique : les comptes se créent en ligne de commande sur le serveur (dans le conteneur : `docker compose exec kafil node server/cli.js …`).
 
 ```bash
 node server/cli.js add-admin --email nouveau@exemple.org --name "Nom"   # mot de passe demandé (12 caractères min.)
@@ -90,7 +77,7 @@ Mots de passe hachés (scrypt), cookie de session `HttpOnly` + `SameSite=Strict`
 npm test
 ```
 
-17 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
+18 tests : parcours complet création → publication → scan du QR → page ; PDF 100 × 135, 85,6 × 54 paysage et 120 × 120 (taille réelle, QR décodé depuis le PDF, police arabe, noms longs, champs masqués, format trop petit) ; renouvellement avec QR identique ; désactivation et expiration ; échec et relance sans doublon ; refus des requêtes non autorisées ou forgées ; publieur GitHub contre une API simulée ; interfaces admin et publique à 320/360 px et sur ordinateur. Les fiches de test portent « (TEST) » et n'existent que dans des dossiers temporaires.
 
 ## Fichiers
 

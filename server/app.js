@@ -60,7 +60,7 @@ function createApp(options = {}) {
     if (route === "/login" && method === "POST") {
       guardCsrf(req);
       const {email, password} = await body(req);
-      const result = await auth.login(store, config, email, password, req.socket.remoteAddress);
+      const result = await auth.login(store, config, email, password, clientIp(req));
       if (result.error) return json(res, result.status, {error: result.error});
       return json(res, 200, {email: result.admin.email, name: result.admin.name}, {"set-cookie": auth.cookie(config, result.token, config.sessionHours * 3600)});
     }
@@ -116,6 +116,12 @@ function createApp(options = {}) {
     return json(res, 404, {error: "Route inconnue."});
   }
 
+  // Behind a trusted reverse proxy the client address is the last X-Forwarded-For hop it appended.
+  function clientIp(req) {
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").map(x => x.trim()).filter(Boolean);
+    return config.trustProxy && forwarded.length ? forwarded[forwarded.length - 1] : req.socket.remoteAddress;
+  }
+
   // Same-origin only: SameSite=Strict cookie + custom header + Origin check on every state-changing call.
   function guardCsrf(req) {
     const origin = req.headers.origin;
@@ -127,14 +133,20 @@ function createApp(options = {}) {
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
+      // The reverse proxy may or may not strip the prefix: accept both.
+      const prefix = config.basePath;
+      if (prefix && (url.pathname === prefix)) return send(res, 301, "", {location: prefix + "/"});
+      if (prefix && url.pathname.startsWith(prefix + "/")) url.pathname = url.pathname.slice(prefix.length);
       if (url.pathname.startsWith("/api/")) return await api(req, res, url);
-      if (url.pathname === "/") return send(res, 302, "", {location: "/admin/"});
+      if (url.pathname === "/admin") return send(res, 301, "", {location: prefix + "/admin/"});
       if (url.pathname.startsWith("/admin/")) return serveFile(res, path.join(root, "admin"), url.pathname.slice(7), {"content-security-policy": ADMIN_CSP});
-      if (url.pathname.startsWith("/assets/")) return serveFile(res, path.join(root, "assets"), url.pathname.slice(8));
-      // Local publisher only: serve the generated public site so URLs can be verified end to end.
-      if (config.publisher === "local" && url.pathname.startsWith("/site/")) {
-        return serveFile(res, config.siteDir, url.pathname.slice(6), {"cache-control": "no-store"});
+      // Self-hosted publisher: this server also serves the public site (cards, registry, assets).
+      if (config.publisher === "local") {
+        const isAsset = url.pathname.startsWith("/assets/");
+        return serveFile(res, config.siteDir, url.pathname.slice(1), {"cache-control": isAsset ? "public, max-age=3600" : "no-cache"});
       }
+      if (url.pathname.startsWith("/assets/")) return serveFile(res, path.join(root, "assets"), url.pathname.slice(8));
+      if (url.pathname === "/") return send(res, 302, "", {location: prefix + "/admin/"});
       return send(res, 404, "Not found");
     } catch (error) {
       const status = error.status || 500;

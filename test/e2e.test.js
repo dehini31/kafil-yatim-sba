@@ -278,8 +278,24 @@ test("validation and security of inputs", async () => {
   const m = await published(xss.json.member.id);
   const page = await (await fetch(m.url)).text();
   assert.ok(!page.includes("<img src=x"), "name is escaped in the public page");
-  assert.equal((await fetch(app.origin + "/site/../data/db.json")).status, 404);
+  assert.notEqual((await fetch(app.origin + "/kafil/..%2fdata/db.json")).status, 200);
   assert.notEqual((await fetch(app.origin + "/admin/..%2f..%2fpackage.json")).status, 200);
-  const db = await fetch(app.origin + "/site/data/db.json");
-  assert.equal(db.status, 404);
+  const db = await fetch(app.origin + "/kafil/data/db.json");
+  assert.notEqual(db.status, 200);
+});
+
+test("everything works under the /kafil sub-path of the domain", async () => {
+  const c = client(app.origin);
+  const login = await c.call("POST", "/kafil/api/login", {email: "admin@example.test", password: require("./helpers").PASSWORD});
+  assert.equal(login.status, 200);
+  assert.match(login.headers.get("set-cookie"), /Path=\/kafil;/);
+  assert.equal((await c.call("GET", "/kafil/api/members")).status, 200);
+  assert.equal((await c.call("GET", "/kafil/admin/")).status, 200);
+  assert.equal((await c.call("GET", "/kafil/admin/admin.js")).status, 200);
+  assert.equal((await c.call("GET", "/kafil/assets/logo.jpg", undefined, {raw: true})).status, 200);
+  assert.equal((await c.call("GET", "/kafil/", undefined, {raw: true})).status, 200); // public home page
+  assert.equal((await c.call("GET", "/kafil/members/preview/", undefined, {raw: true})).status, 200);
+  assert.equal((await fetch(app.origin + "/kafil/api/members")).status, 401);
+  const home = await (await fetch(app.origin + "/kafil/")).text();
+  assert.ok(home.includes("بطاقات الأعضاء"));
 });

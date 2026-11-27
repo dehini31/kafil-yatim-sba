@@ -1,5 +1,5 @@
-@font-face{font-family:Tajawal;src:url(/assets/tajawal.ttf);font-weight:400;font-display:swap}
-@font-face{font-family:Tajawal;src:url(/assets/tajawal-bold.ttf);font-weight:700 900;font-display:swap}
+@font-face{font-family:Tajawal;src:url(../assets/tajawal.ttf);font-weight:400;font-display:swap}
+@font-face{font-family:Tajawal;src:url(../assets/tajawal-bold.ttf);font-weight:700 900;font-display:swap}
 :root{--green:#173f39;--gold:#e9bd76;--paper:#f6f5ef;--ink:#193a34;--muted:#566b63;--line:#d9dfd6;--white:#fffefa;--red:#9b2c22;--ok:#1d5a2b;--warn:#8a5a0a}
 *{box-sizing:border-box}
 [hidden]{display:none!important}

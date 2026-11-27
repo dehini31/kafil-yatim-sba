@@ -6,8 +6,11 @@ const root = path.join(__dirname, "..");
 function load(env = process.env) {
   const baseUrl = env.PUBLIC_BASE_URL || require("../data/site.json").baseUrl;
   if (!/^https?:\/\/.+\/$/.test(baseUrl)) throw new Error("PUBLIC_BASE_URL must end with /");
+  // Everything can live under a sub-path of a domain, e.g. https://dehini.com/kafil/
+  const basePath = (env.BASE_PATH ?? "").replace(/\/+$/, "");
+  if (basePath && !/^\/[\w./-]*$/.test(basePath)) throw new Error("BASE_PATH must look like /kafil");
   return {
-    root,
+    root, basePath, trustProxy: env.TRUST_PROXY === "true",
     port: Number(env.PORT || 8787),
     host: env.HOST || "127.0.0.1",
     dataDir: path.resolve(env.DATA_DIR || path.join(root, ".data")),

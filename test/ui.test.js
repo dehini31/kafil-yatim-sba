@@ -27,7 +27,7 @@ for (const [label, viewport] of [["mobile", {width: 360, height: 740}], ["deskto
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
-    await page.goto(app.origin + "/admin/");
+    await page.goto(app.origin + "/kafil/admin/");
     await page.fill("input[name=email]", "admin@example.test");
     await page.fill("input[name=password]", "bad-password-xx");
     await page.click("button[type=submit]");

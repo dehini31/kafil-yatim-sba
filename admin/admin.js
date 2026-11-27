@@ -1,6 +1,9 @@
 "use strict";
 
 const app = document.getElementById("app");
+const ROOT = new URL("../", location.href).pathname; // works under any sub-path, e.g. /kafil/
+const API = ROOT + "api";
+const ASSETS = ROOT + "assets/";
 const L = {
   status: {active: "Actif", expired: "Expiré", disabled: "Désactivé"},
   pub: {saving: "Enregistrement", publishing: "Publication en cours", published: "Publiée", failed: "Échec"},
@@ -29,7 +32,7 @@ function h(tag, attrs = {}, ...children) {
 const badge = (kind, text) => h("span", {class: "badge b-" + kind}, text);
 
 async function api(method, url, data) {
-  const response = await fetch("/api" + url, {
+  const response = await fetch(API + url, {
     method, credentials: "same-origin",
     headers: {"content-type": "application/json", "x-requested-with": "kafil-admin"},
     body: data === undefined ? undefined : JSON.stringify(data)
@@ -64,7 +67,7 @@ function renderLogin() {
       await boot();
     } catch (error) { notify(msg, "err", error.message); }
   }},
-  h("div", {class: "row"}, h("img", {src: "/assets/logo.jpg", alt: "", width: 48, height: 48}), h("h2", {}, "Administration")),
+  h("div", {class: "row"}, h("img", {src: ASSETS + "logo.jpg", alt: "", width: 48, height: 48}), h("h2", {}, "Administration")),
   h("p", {class: "muted"}, "Kafil El Yatim · Sidi Bel Abbès"),
   h("label", {class: "field"}, "E-mail", h("input", {type: "email", name: "email", required: true, autocomplete: "username"})),
   h("label", {class: "field"}, "Mot de passe", h("input", {type: "password", name: "password", required: true, autocomplete: "current-password"})),
@@ -77,7 +80,7 @@ function render() {
   if (!state.me) return renderLogin();
   const tab = (id, label) => h("button", {class: "tab", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); if (id === "settings") loadSettings(); }}, label);
   app.replaceChildren(
-    h("header", {class: "top"}, h("img", {src: "/assets/logo.jpg", alt: ""}), h("h1", {}, "Kafil El Yatim · Sidi Bel Abbès"),
+    h("header", {class: "top"}, h("img", {src: ASSETS + "logo.jpg", alt: ""}), h("h1", {}, "Kafil El Yatim · Sidi Bel Abbès"),
       h("nav", {}, tab("members", "Adhérents"), tab("settings", "Réglages"),
         h("button", {class: "tab", onclick: async () => { await api("POST", "/logout"); state.me = null; render(); }}, "Déconnexion"))),
     h("main", {id: "main"}));
@@ -112,7 +115,7 @@ function drawList() {
   box.replaceChildren(h("table", {},
     h("thead", {}, h("tr", {}, ...["", "Nom", "N°", "Validité", "Publication", ""].map(t => h("th", {}, t)))),
     h("tbody", {}, state.members.map(m => h("tr", {"data-id": m.id},
-      h("td", {}, h("img", {class: "avatar", src: `/api/members/${m.id}/photo`, alt: ""})),
+      h("td", {}, h("img", {class: "avatar", src: `${API}/members/${m.id}/photo`, alt: ""})),
       h("td", {class: "name", dir: "auto"}, m.fullName, h("div", {class: "muted", dir: "auto", style: "font-weight:400"}, m.role)),
       h("td", {}, m.memberNumber || "—"),
       h("td", {}, badge(m.status, L.status[m.status]), " ", h("span", {class: "muted"}, m.expiresAt)),
@@ -126,7 +129,7 @@ function openForm(member) {
   const dialog = h("dialog");
   const msg = h("div");
   let photo = null;
-  const preview = h("img", {class: "thumb", alt: "", src: editing ? `/api/members/${member.id}/photo` : "", hidden: !editing});
+  const preview = h("img", {class: "thumb", alt: "", src: editing ? `${API}/members/${member.id}/photo` : "", hidden: !editing});
   const requestId = crypto.randomUUID();
   const form = h("form", {onsubmit: async event => {
     event.preventDefault();
@@ -196,7 +199,7 @@ function drawDetail(dialog, m) {
   dialog.replaceChildren(
     h("div", {class: "dlg-head"}, h("h2", {dir: "auto"}, m.fullName), h("button", {class: "btn", onclick: () => dialog.close()}, "Fermer")),
     h("div", {class: "dlg-body"},
-      h("div", {class: "row"}, h("img", {class: "thumb", src: `/api/members/${m.id}/photo?${m.updatedAt}`, alt: ""}),
+      h("div", {class: "row"}, h("img", {class: "thumb", src: `${API}/members/${m.id}/photo?${m.updatedAt}`, alt: ""}),
         h("div", {}, h("div", {dir: "auto"}, m.role), h("div", {class: "muted"}, "N° " + (m.memberNumber || "—") + " · expire le " + m.expiresAt),
           h("div", {class: "steps"}, badge(m.status, L.status[m.status]), badge(m.publication.state, L.pub[m.publication.state]), badge(m.pdf.state, L.pdf[m.pdf.state])))),
       m.publication.state === "failed" ? h("div", {class: "notice err", role: "alert"}, "La fiche est enregistrée mais la publication a échoué : " + m.publication.error) : null,
@@ -208,8 +211,8 @@ function drawDetail(dialog, m) {
         h("div", {class: "actions"},
           published ? h("a", {class: "btn primary", href: m.url, target: "_blank", rel: "noopener"}, "Voir la carte") : h("button", {class: "btn primary", disabled: true}, "Voir la carte"),
           act("Copier le lien", async () => { await navigator.clipboard.writeText(m.url); notify(msg, "ok", "Lien copié."); }, "btn", !published),
-          download(`/api/members/${m.id}/qr.png`, "Télécharger le QR"),
-          download(`/api/members/${m.id}/card.pdf`, "Télécharger le PDF")),
+          download(`${API}/members/${m.id}/qr.png`, "Télécharger le QR"),
+          download(`${API}/members/${m.id}/card.pdf`, "Télécharger le PDF")),
         msg),
       h("div", {class: "actions"},
         m.publication.state === "failed" ? act("Relancer la publication", () => api("POST", `/members/${m.id}/publish`), "btn primary") : null,
@@ -257,7 +260,7 @@ function previewPane(request) {
       const scale = Math.min(1, 300 / px(data.widthMm), 420 / px(data.heightMm)) || 1;
       box.style.width = px(data.widthMm) * scale + "px";
       box.style.height = px(data.heightMm) * scale + "px";
-      const frame = h("iframe", {src: "/api/print-preview/" + data.token, title: "Aperçu", scrolling: "no", sandbox: "allow-scripts allow-same-origin",
+      const frame = h("iframe", {src: API + "/print-preview/" + data.token, title: "Aperçu", scrolling: "no", sandbox: "allow-scripts allow-same-origin",
         style: `width:${px(data.widthMm)}px;height:${px(data.heightMm)}px;transform:scale(${scale})`});
       box.replaceChildren(frame);
       const info = [h("div", {class: "muted"}, `Format ${data.widthMm} × ${data.heightMm} mm · QR ${data.layout.qrMm ? data.layout.qrMm.toFixed(1) + " mm" : "absent"}`)];

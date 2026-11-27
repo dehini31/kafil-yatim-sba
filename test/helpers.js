@@ -9,11 +9,11 @@ const {createApp} = require("../server/app");
 const PASSWORD = "correct-horse-battery";
 async function startApp(extra = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kafil-test-"));
-  const app = createApp({dataDir: path.join(dir, "data"), siteDir: path.join(dir, "site"), verifyTimeoutMs: 4000, verifyIntervalMs: 100, ...extra});
+  const app = createApp({basePath: "/kafil", dataDir: path.join(dir, "data"), siteDir: path.join(dir, "site"), verifyTimeoutMs: 4000, verifyIntervalMs: 100, ...extra});
   await auth.addAdmin(app.store, {email: "admin@example.test", name: "Admin Test", password: PASSWORD});
   await new Promise(resolve => app.server.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${app.server.address().port}`;
-  app.config.baseUrl = origin + "/site/";
+  app.config.baseUrl = origin + "/kafil/";
   app.origin = origin;
   app.dir = dir;
   return app;
