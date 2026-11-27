@@ -68,6 +68,20 @@ Développement local : `npm install`, `npm run admin:add -- --email vous@exemple
 
 Pour changer la configuration plus tard : supprimer le fichier `.env` et relancer, ou `npm run setup`.
 
+## Déploiement par Git sur l'hébergeur (sans envoi manuel)
+
+L'admin (sur l'ordinateur du bureau) publie chaque carte par un commit sur GitHub (`PUBLISHER=github`, `GITHUB_TOKEN` dans `.env`) ; l'hébergeur récupère le dépôt avec `git pull`. Le fichier `.htaccess` masque le code de l'application, les tests et les secrets.
+
+Une seule fois, dans le terminal de l'hébergeur :
+
+```bash
+cd ~/public_html
+git clone https://github.com/dehini31/kafil-yatim-sba.git kafil
+cd kafil && chmod +x deploy-host.sh
+```
+
+Mise à jour automatique : ajouter dans **cPanel → Tâches Cron** (chaque minute) `cd ~/public_html/kafil && ./deploy-host.sh >> ~/kafil-deploy.log 2>&1`. Sinon, lancer `./deploy-host.sh` à la main après chaque publication. Le dépôt doit être public ou l'hébergeur doit avoir une clé de déploiement en lecture seule.
+
 ## Sans VPS : admin sur votre ordinateur, site sur dehini.com/kafil (FTP)
 
 Le site public (cartes, QR, pages) est statique : il n'a besoin que de l'hébergement actuel de dehini.com. Seule l'administration (connexion, PDF) demande Node et Chromium ; elle tourne sur un ordinateur du bureau et **envoie automatiquement chaque carte publiée par FTP** vers `dehini.com/kafil`.
