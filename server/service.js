@@ -228,8 +228,8 @@ class Service {
     try {
       if (!m.verifiedUrl) throw fail(409, "يجب نشر البطاقة أولاً.");
       const config = this.printConfig(m);
-      const html = print.buildHtml({member: m, config, publicUrl: m.verifiedUrl, photoBuffer: this.photoBuffer(m)});
-      const {pdf, layout} = await this.pdf.render(html, config);
+      const model = print.makeModel({member: m, config, publicUrl: m.verifiedUrl, photoBuffer: this.photoBuffer(m)});
+      const {pdf, layout} = await this.pdf.render(model);
       if (!layout.fits) {
         m.pdf = {state: "blocked", issues: layout.issues, config};
       } else {
@@ -238,9 +238,7 @@ class Service {
       }
       if (actor) this.store.audit(actor, "member.pdf", {member: m.id});
     } catch (error) {
-      m.pdf = error.code === "NO_BROWSER"
-        ? {state: "unavailable", error: "إنشاء PDF على الخادم غير متاح : استخدم «طباعة / PDF (المتصفح)» في بطاقة العضو."}
-        : {state: "failed", error: error.message};
+      m.pdf = {state: "failed", error: error.message};
     }
     this.store.save();
     return this.view(m);
@@ -266,13 +264,9 @@ class Service {
     }
     const cfg = print.normalizeConfig(config ?? (memberId ? member.print : null), this.db.settings.printDefaults);
     const image = draft.photo ? await photo.normalize(draft.photo) : memberId ? this.photoBuffer(this.find(memberId)) : null;
-    const html = print.buildHtml({member, config: cfg, publicUrl: url, photoBuffer: image});
-    let layout;
-    try { layout = await this.pdf.analyze(html, cfg); }
-    catch (error) {
-      if (error.code !== "NO_BROWSER") throw error;
-      layout = {ready: true, fits: true, qrMm: null, issues: [{blocking: false, message: "التحقق الآلي من التنسيق غير متاح على هذا الخادم : راجع المعاينة."}]};
-    }
+    const model = print.makeModel({member, config: cfg, publicUrl: url, photoBuffer: image});
+    const html = print.buildHtml(model);
+    const layout = model.layout;
     const token = newId();
     this.previews.set(token, {html, at: Date.now()});
     for (const [key, value] of this.previews) if (Date.now() - value.at > 10 * 60e3 || this.previews.size > 50) this.previews.delete(key);

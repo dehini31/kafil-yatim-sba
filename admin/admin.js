@@ -7,7 +7,7 @@ const ASSETS = ROOT + "assets/";
 const L = {
   status: {active: "ساري", expired: "منتهي", disabled: "معطّل"},
   pub: {saving: "جارٍ الحفظ", publishing: "جارٍ النشر", published: "منشورة", failed: "فشل"},
-  pdf: {none: "PDF : —", unavailable: "PDF عبر المتصفح", building: "جارٍ إنشاء PDF", ready: "PDF جاهز", blocked: "PDF محجوب", failed: "PDF : فشل"}
+  pdf: {none: "PDF : —", building: "جارٍ إنشاء PDF", ready: "PDF جاهز", blocked: "PDF محجوب", failed: "PDF : فشل"}
 };
 const PRINT_FIELDS = [
   ["logo", "الشعار", null], ["association", "اسم الجمعية", null], ["office", "المكتب الولائي", null],
@@ -204,7 +204,6 @@ function drawDetail(dialog, m) {
           h("div", {class: "steps"}, badge(m.status, L.status[m.status]), badge(m.publication.state, L.pub[m.publication.state]), badge(m.pdf.state, L.pdf[m.pdf.state])))),
       m.publication.state === "failed" ? h("div", {class: "notice err", role: "alert"}, "تم حفظ البطاقة لكن النشر فشل : " + m.publication.error) : null,
       ["saving", "publishing"].includes(m.publication.state) ? h("div", {class: "notice warn", role: "status"}, L.pub[m.publication.state] + "… (قد يستغرق التحقق من الرابط العام دقيقة أو دقيقتين)") : null,
-      m.pdf.state === "unavailable" ? h("div", {class: "notice warn"}, m.pdf.error) : null,
       m.pdf.state === "failed" ? h("div", {class: "notice err"}, "PDF : " + m.pdf.error) : null,
       m.pdf.state === "blocked" ? h("div", {class: "notice err"}, "لم يُنشأ PDF : " + m.pdf.issues.map(i => i.message).join(" ")) : null,
       (m.pdf.issues || []).filter(i => !i.blocking).map(i => h("div", {class: "notice warn"}, i.message)),
