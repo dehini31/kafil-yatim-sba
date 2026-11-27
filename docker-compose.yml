@@ -1,0 +1,8 @@
+services:
+  kafil:
+    build: .
+    restart: unless-stopped
+    ports: ["127.0.0.1:8787:8787"]   # exposed to the reverse proxy only
+    volumes: ["kafil-data:/data"]    # admins, members, photos, PDFs, published site: back this up
+volumes:
+  kafil-data:
