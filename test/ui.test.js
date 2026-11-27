@@ -86,7 +86,8 @@ test("public card at 320px, 360px and desktop", async () => {
     assert.ok(await page.locator(".portrait").isVisible());
     assert.equal(await page.locator("h1").innerText(), "فاطمة الزهراء بن عيسى (TEST)");
     // empty contacts are hidden: only the default address shows; the national block is present on every card
-    assert.equal(await page.locator(".contact-grid .contact").count(), 1);
+    assert.equal(await page.locator(".contact-grid .contact").count(), 2); // address + Facebook
+    assert.equal(await page.getByRole("link", {name: /جمعية كافل اليتيم سيدي بلعباس الولائية/}).getAttribute("href"), "https://www.facebook.com/elyatim22/");
     await page.getByText("شارع ناصري عبد القادر، رقم 40، سيدي ياسين").waitFor();
     await page.getByText("المكتب الوطني للجمعية").waitFor();
     await page.getByText("هذه بيانات التواصل الوطنية، وليست أرقام مكتب سيدي بلعباس.").waitFor();

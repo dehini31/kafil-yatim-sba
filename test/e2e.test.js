@@ -250,7 +250,7 @@ test("settings: public fields control what is published; contacts are centralise
   assert.equal(app.store.db.settingsPublication.state, "published", app.store.db.settingsPublication.error);
   const contacts = JSON.parse(site("data/contacts.json"));
   assert.equal(contacts.email, "bureau@example.test");
-  assert.equal(contacts.facebook, "");
+  assert.equal(contacts.facebook, "https://www.facebook.com/elyatim22/");
   assert.equal(contacts.address, "شارع ناصري عبد القادر، رقم 40، سيدي ياسين", "official default address");
   assert.equal(contacts.nationalEmail, "contact@kafilyatim.dz");
   const page = await (await fetch(created.url)).text();
